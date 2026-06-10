@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Upload, Trash2, Star, Loader2 } from 'lucide-react'
 import { upload } from '@/lib/upload-client'
 import type { Album, Photo } from '@/lib/types'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 
 export default function AdminAlbumPhotosPage() {
   const params = useParams()
@@ -202,7 +203,7 @@ export default function AdminAlbumPhotosPage() {
           <Card key={photo.id} className="group overflow-hidden">
             <div className="relative aspect-square">
               <Image
-                src={photo.url}
+                src={resolveAssetUrl(photo.url) ?? photo.url}
                 alt={photo.caption || 'Photo'}
                 fill
                 className="object-cover"

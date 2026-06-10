@@ -15,6 +15,7 @@ import { ru } from 'date-fns/locale'
 import type { Album, Photo, Comment, Profile } from '@/lib/types'
 import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
 import { fetchNormalizedComments, buildCommentTree } from '@/lib/comments-client'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 
 type CommentWithProfile = Comment & { 
   profiles: Pick<Profile, 'display_name' | 'username' | 'role'>
@@ -314,7 +315,7 @@ export default function AlbumPage() {
               >
                 <div className="relative overflow-hidden rounded-lg bg-muted">
                   <Image
-                    src={photo.url}
+                    src={resolveAssetUrl(photo.url) ?? photo.url}
                     alt={photo.caption || 'Photo'}
                     width={400}
                     height={300}
@@ -364,7 +365,7 @@ export default function AlbumPage() {
 
             {/* Image */}
             <Image
-              src={selectedPhoto.url}
+              src={resolveAssetUrl(selectedPhoto.url) ?? selectedPhoto.url}
               alt={selectedPhoto.caption || 'Photo'}
               width={1200}
               height={800}

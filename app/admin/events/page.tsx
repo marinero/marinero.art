@@ -12,6 +12,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { upload } from '@/lib/upload-client'
 import type { Event, Album, Video as VideoType } from '@/lib/types'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 import { Checkbox } from '@/components/ui/checkbox'
 
 export default function AdminEventsPage() {
@@ -411,7 +412,7 @@ export default function AdminEventsPage() {
                   {formData.image_url ? (
                     <div className="relative w-full max-w-xs">
                       <img 
-                        src={formData.image_url} 
+                        src={resolveAssetUrl(formData.image_url) ?? formData.image_url} 
                         alt="Preview" 
                         className="w-full h-32 object-cover rounded-lg border"
                       />
@@ -490,7 +491,7 @@ export default function AdminEventsPage() {
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {album.cover_image_url ? (
                               <img
-                                src={album.cover_image_url}
+                                src={resolveAssetUrl(album.cover_image_url) ?? album.cover_image_url}
                                 alt={album.title}
                                 className="w-10 h-10 object-cover rounded"
                               />
@@ -544,7 +545,7 @@ export default function AdminEventsPage() {
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {video.thumbnail_url ? (
                               <img
-                                src={video.thumbnail_url}
+                                src={resolveAssetUrl(video.thumbnail_url) ?? video.thumbnail_url}
                                 alt={video.title}
                                 className="w-16 h-10 object-cover rounded"
                               />

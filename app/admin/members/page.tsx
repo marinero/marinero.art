@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2, X, Users, ImageIcon } from 'lucide-react'
 import { upload } from '@/lib/upload-client'
 import { BAND_ROLES, getRoleColor, getRoleLabel } from '@/lib/band'
 import type { BandMember } from '@/lib/types'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 
 interface SegmentForm {
   role: string
@@ -238,7 +239,7 @@ export default function AdminMembersPage() {
                     <div className="relative w-24">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={formData.photo_url}
+                        src={resolveAssetUrl(formData.photo_url) ?? formData.photo_url}
                         alt="photo"
                         className="w-24 h-24 object-cover rounded-lg border"
                       />
@@ -372,7 +373,7 @@ export default function AdminMembersPage() {
                     {member.photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={member.photo_url}
+                        src={resolveAssetUrl(member.photo_url) ?? member.photo_url}
                         alt={member.name}
                         className="w-full h-full object-cover"
                       />

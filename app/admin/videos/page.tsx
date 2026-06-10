@@ -33,6 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Pencil, Trash2, Video, ExternalLink, X, Play, Loader2, Clock } from 'lucide-react'
 import type { Video as VideoType } from '@/lib/types'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 
 // Transliteration map for Cyrillic to Latin
 const translitMap: Record<string, string> = {
@@ -466,7 +467,7 @@ export default function AdminVideosPage() {
                   <div className="relative aspect-video bg-muted">
                     {video.thumbnail_url ? (
                       <img
-                        src={video.thumbnail_url}
+                        src={resolveAssetUrl(video.thumbnail_url) ?? video.thumbnail_url}
                         alt={video.title}
                         className="w-full h-full object-cover"
                       />
@@ -510,7 +511,7 @@ export default function AdminVideosPage() {
                   <div className="relative aspect-video bg-muted">
                     {video.thumbnail_url ? (
                       <img
-                        src={video.thumbnail_url}
+                        src={resolveAssetUrl(video.thumbnail_url) ?? video.thumbnail_url}
                         alt={video.title}
                         className="w-full h-full object-cover"
                       />

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Video as VideoIcon, MessageCircle, Play } from 'lucide-react'
 import type { Video } from '@/lib/types'
 import { pageMetadata } from '@/lib/metadata'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 
 export const metadata = pageMetadata({
   segments: ['Видео'],
@@ -91,7 +92,7 @@ export default async function VideosPage() {
                       <div className="relative aspect-video">
                         {thumbnail ? (
                           <Image
-                            src={thumbnail}
+                            src={resolveAssetUrl(thumbnail) ?? thumbnail}
                             alt={video.title}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-105"

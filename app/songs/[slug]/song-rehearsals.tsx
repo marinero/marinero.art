@@ -23,6 +23,7 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
 import { MultitrackPlayer } from '@/components/multitrack'
+import { resolveAudioUrl } from '@/lib/storage-keys'
 import type { AudioFile, Video, MultitrackGroup } from '@/lib/types'
 
 export interface RehearsalTake {
@@ -364,7 +365,7 @@ function AudioTrack({
       <CardContent className="p-4 space-y-3">
         <audio
           ref={audioRef}
-          src={file.file_url || undefined}
+          src={resolveAudioUrl(file.file_url) || undefined}
           preload="none"
           onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
           onLoadedMetadata={() => {

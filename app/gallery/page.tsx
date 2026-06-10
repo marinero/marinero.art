@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Camera, Images } from 'lucide-react'
 import type { Album } from '@/lib/types'
 import { pageMetadata } from '@/lib/metadata'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 
 export const metadata = pageMetadata({
   segments: ['Фотогалерея'],
@@ -78,9 +79,9 @@ export default async function GalleryPage() {
                     className="group relative overflow-hidden rounded-xl bg-card border border-border hover:border-primary/50 transition-all"
                   >
                     <div className="relative aspect-[4/3]">
-                      {album.cover_image_url ? (
+                      {resolveAssetUrl(album.cover_image_url) ? (
                         <Image
-                          src={album.cover_image_url}
+                          src={resolveAssetUrl(album.cover_image_url)!}
                           alt={album.title}
                           fill
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -115,7 +116,7 @@ export default async function GalleryPage() {
                   >
                     <div className="relative">
                       <Image
-                        src={photo.url}
+                        src={resolveAssetUrl(photo.url) ?? photo.url}
                         alt={photo.alt}
                         width={600}
                         height={index % 3 === 0 ? 800 : index % 2 === 0 ? 600 : 400}

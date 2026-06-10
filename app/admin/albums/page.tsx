@@ -13,6 +13,7 @@ import { ru } from 'date-fns/locale'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { upload } from '@/lib/upload-client'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 import type { Album } from '@/lib/types'
 
 export default function AdminAlbumsPage() {
@@ -240,7 +241,7 @@ export default function AdminAlbumsPage() {
                   {formData.cover_image_url ? (
                     <div className="relative w-full max-w-xs">
                       <img
-                        src={formData.cover_image_url}
+                        src={resolveAssetUrl(formData.cover_image_url) ?? formData.cover_image_url}
                         alt="Preview"
                         className="w-full h-32 object-cover rounded-lg border"
                       />
@@ -320,7 +321,7 @@ export default function AdminAlbumsPage() {
               <div className="relative aspect-video bg-muted">
                 {album.cover_image_url ? (
                   <Image
-                    src={album.cover_image_url}
+                    src={resolveAssetUrl(album.cover_image_url) ?? album.cover_image_url}
                     alt={album.title}
                     fill
                     className="object-cover rounded-t-lg"

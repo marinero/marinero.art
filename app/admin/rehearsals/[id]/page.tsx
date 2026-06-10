@@ -74,6 +74,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import type { Video as VideoType } from '@/lib/types'
 import type { MultitrackGroup } from '@/lib/types'
 import { MultitrackPlayer, MultitrackUploadDialog } from '@/components/multitrack'
+import { resolveAssetUrl, resolveAudioUrl } from '@/lib/storage-keys'
 
 interface AudioFile {
   id: string
@@ -329,7 +330,7 @@ export default function RehearsalDetailPage() {
     setIsPlaying(true)
 
     if (audioRef.current) {
-      audioRef.current.src = targetAudio.file_url
+      audioRef.current.src = resolveAudioUrl(targetAudio.file_url) ?? targetAudio.file_url
       audioRef.current.load()
       
       const handleCanPlay = () => {
@@ -1003,7 +1004,7 @@ export default function RehearsalDetailPage() {
   setDuration(audio.duration_seconds || 0) // Use duration from DB
       setIsPlaying(true)
       if (audioRef.current) {
-        audioRef.current.src = audio.file_url
+        audioRef.current.src = resolveAudioUrl(audio.file_url) ?? audio.file_url
         audioRef.current.load() // Ensure metadata is loaded
         audioRef.current.play()
       }
@@ -1646,7 +1647,7 @@ export default function RehearsalDetailPage() {
                       <div className="flex items-center gap-3">
                         {video.thumbnail_url ? (
                           <img
-                            src={video.thumbnail_url}
+                            src={resolveAssetUrl(video.thumbnail_url) ?? video.thumbnail_url}
                             alt={video.title}
                             className="w-20 h-12 object-cover rounded"
                           />
@@ -1892,7 +1893,7 @@ export default function RehearsalDetailPage() {
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {video.thumbnail_url ? (
                             <img
-                              src={video.thumbnail_url}
+                              src={resolveAssetUrl(video.thumbnail_url) ?? video.thumbnail_url}
                               alt={video.title}
                               className="w-16 h-10 object-cover rounded"
                             />

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "storage:import": "tsx scripts/import-blob-archive-to-minio.ts",
+    "storage:sync-s3": "bash scripts/sync-minio-to-s3.sh",
     "users:migrate": "tsx scripts/migrate-supabase-users.ts",
     "db:backup": "tsx scripts/backup-database.ts",
     "deploy:prod": "docker compose -f docker-compose.prod.yml up -d --build",

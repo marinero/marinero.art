@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { resolveAudioUrl } from '@/lib/storage-keys'
 import { 
   Play, 
   Pause, 
@@ -360,7 +361,9 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
     try {
       for (const file of localFiles) {
         // Fetch audio file and generate waveform
-        const response = await fetch(file.file_url)
+        const audioUrl = resolveAudioUrl(file.file_url)
+        if (!audioUrl) continue
+        const response = await fetch(audioUrl)
         if (!response.ok) continue
         
         const arrayBuffer = await response.arrayBuffer()
@@ -486,7 +489,7 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
             ref={el => {
               if (el) audioRefs.current[file.id] = el
             }}
-            src={file.file_url}
+            src={resolveAudioUrl(file.file_url) ?? file.file_url}
             preload="metadata"
           />
         ))}

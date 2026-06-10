@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Pencil, Trash2, X, Disc3, ImageIcon, Link2 } from 'lucide-react'
 import { upload } from '@/lib/upload-client'
 import type { DiscographyItem, ReleaseType, PlatformLink } from '@/lib/types'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 
 const RELEASE_TYPES: { value: ReleaseType; label: string }[] = [
   { value: 'album', label: 'Альбом' },
@@ -264,7 +265,7 @@ export default function AdminDiscographyPage() {
                     <div className="relative w-32">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={formData.cover_image_url}
+                        src={resolveAssetUrl(formData.cover_image_url) ?? formData.cover_image_url}
                         alt="cover"
                         className="w-32 h-32 object-cover rounded-lg border"
                       />
@@ -405,7 +406,7 @@ export default function AdminDiscographyPage() {
                   {item.cover_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={item.cover_image_url}
+                      src={resolveAssetUrl(item.cover_image_url) ?? item.cover_image_url}
                       alt={item.title}
                       className="w-full h-full object-cover"
                     />

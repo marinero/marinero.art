@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 import { 
   Users, 
   Search, 
@@ -229,7 +230,7 @@ export default function AdminUsersPage() {
                     <div className="flex-shrink-0">
                       {user.avatar_url ? (
                         <img 
-                          src={user.avatar_url} 
+                          src={resolveAssetUrl(user.avatar_url) ?? user.avatar_url} 
                           alt={user.display_name || 'User'} 
                           className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                         />

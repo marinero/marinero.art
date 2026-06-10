@@ -15,7 +15,17 @@ export function extractStorageKey(storedUrl: string): string | null {
     const keyParam = url.searchParams.get('key') ?? url.searchParams.get('pathname')
     if (keyParam) return decodeURIComponent(keyParam)
 
-    // Прямой MinIO/S3 URL: .../marinero-public/marinero/gallery/foo.jpg
+    // MinIO path-style: http://localhost:9000/marinero-public/marinero/gallery/foo.jpg
+    const bucketPublic = process.env.S3_BUCKET_PUBLIC ?? 'marinero-public'
+    const bucketPrivate = process.env.S3_BUCKET_PRIVATE ?? 'marinero-private'
+    for (const bucket of [bucketPublic, bucketPrivate]) {
+      const prefix = `/${bucket}/`
+      if (url.pathname.startsWith(prefix)) {
+        return decodeURIComponent(url.pathname.slice(prefix.length))
+      }
+    }
+
+    // Прямой S3 URL: https://marinero-public.s3.../marinero/gallery/foo.jpg
     const publicBase = process.env.NEXT_PUBLIC_STORAGE_URL
     if (publicBase && storedUrl.startsWith(publicBase)) {
       return storedUrl.slice(publicBase.length).replace(/^\//, '')
@@ -28,6 +38,12 @@ export function extractStorageKey(storedUrl: string): string | null {
 }
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif)$/i
+const AUDIO_EXT = /\.(mp3|wav|ogg|m4a|flac|aac)$/i
+const STORAGE_KEY_PREFIX = /^(marinero\/|multitrack\/|temp-chunks\/)/
+
+function isStorageKey(key: string): boolean {
+  return STORAGE_KEY_PREFIX.test(key.replace(/^\/+/, ''))
+}
 
 /** Определяет бакет по пути файла в Blob/MinIO. */
 export function resolveBucket(key: string): 'public' | 'private' {
@@ -35,6 +51,7 @@ export function resolveBucket(key: string): 'public' | 'private' {
 
   if (normalized.startsWith('temp-chunks/')) return 'private'
   if (normalized.startsWith('marinero/gallery/')) return 'public'
+  if (normalized.startsWith('marinero/about/')) return 'public'
   if (normalized.startsWith('marinero/audio/')) return 'private'
   if (normalized.startsWith('multitrack/')) return 'private'
 
@@ -68,9 +85,27 @@ export function publicAssetUrl(key: string): string | null {
   return `${base}/${key}`
 }
 
-/** Лучший URL для сохранения в БД. */
+/** Нормализует URL из БД в относительный /api/file?key=... (или /api/audio/stream для аудио). */
+export function resolveAssetUrl(storedUrl: string | null | undefined): string | null {
+  if (!storedUrl) return null
+  if (storedUrl.startsWith('/images/')) return storedUrl
+
+  const key = extractStorageKey(storedUrl)
+  if (!key || !isStorageKey(key)) return storedUrl
+
+  if (AUDIO_EXT.test(key)) return audioStreamUrl(key)
+  return fileApiUrl(key)
+}
+
+/** Для <audio> и fetch аудиофайлов. */
+export function resolveAudioUrl(storedUrl: string | null | undefined): string | null {
+  return resolveAssetUrl(storedUrl)
+}
+
+/** URL для сохранения в БД (всегда относительный, через Next.js API). */
 export function storageUrlForKey(key: string): string {
-  return publicAssetUrl(key) ?? fileApiUrl(key)
+  if (AUDIO_EXT.test(key)) return audioStreamUrl(key)
+  return fileApiUrl(key)
 }
 
 /** MIME по расширению (без зависимостей). */

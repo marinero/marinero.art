@@ -48,7 +48,12 @@ function loadEnvFile(path: string) {
   }
 }
 
-loadEnvFile(join(process.cwd(), '.env.local'))
+const envFile = process.env.ENV_FILE ?? '.env.local'
+loadEnvFile(join(process.cwd(), envFile))
+// fallback for local dev
+if (envFile !== '.env.local') {
+  loadEnvFile(join(process.cwd(), '.env.local'))
+}
 
 // С хоста MinIO доступен как localhost, не minio
 if (process.env.S3_ENDPOINT?.includes('minio:')) {
@@ -60,15 +65,24 @@ const BUCKETS = {
   private: process.env.S3_BUCKET_PRIVATE ?? 'marinero-private',
 }
 
-const s3 = new S3Client({
-  region: process.env.S3_REGION ?? 'us-east-1',
-  endpoint: process.env.S3_ENDPOINT,
-  forcePathStyle: !!process.env.S3_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
-  },
-})
+function createS3Client() {
+  const config: ConstructorParameters<typeof S3Client>[0] = {
+    region: process.env.S3_REGION ?? 'us-east-1',
+  }
+  if (process.env.S3_ENDPOINT) {
+    config.endpoint = process.env.S3_ENDPOINT
+    config.forcePathStyle = true
+  }
+  if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+    config.credentials = {
+      accessKeyId: process.env.S3_ACCESS_KEY_ID,
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    }
+  }
+  return new S3Client(config)
+}
+
+const s3 = createS3Client()
 
 // --- CLI ---
 
@@ -78,28 +92,32 @@ function parseArgs() {
   let zip = ''
   let dryRun = false
   let skipDb = false
+  let dbOnly = false
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--source') source = args[++i] ?? ''
     else if (args[i] === '--zip') zip = args[++i] ?? ''
     else if (args[i] === '--dry-run') dryRun = true
     else if (args[i] === '--skip-db') skipDb = true
+    else if (args[i] === '--db-only') dbOnly = true
   }
 
-  if (!source && !zip) {
+  if (!dbOnly && !source && !zip) {
     console.error(`
 Usage:
   pnpm storage:import -- --source <extracted-folder>
   pnpm storage:import -- --zip <archive.zip>
+  pnpm storage:import -- --db-only
 
 Options:
   --dry-run   только показать план, без загрузки
   --skip-db   только загрузить файлы, не обновлять PostgreSQL
+  --db-only   только обновить URL в PostgreSQL (файлы уже в S3)
 `)
     process.exit(1)
   }
 
-  return { source, zip, dryRun, skipDb }
+  return { source, zip, dryRun, skipDb, dbOnly }
 }
 
 // --- filesystem ---
@@ -195,6 +213,10 @@ const URL_COLUMNS: UrlColumn[] = [
   { table: 'photos', column: 'url' },
   { table: 'photos', column: 'thumbnail_url' },
   { table: 'events', column: 'image_url' },
+  { table: 'discography', column: 'cover_image_url' },
+  { table: 'band_members', column: 'photo_url' },
+  { table: 'videos', column: 'thumbnail_url' },
+  { table: 'profiles', column: 'avatar_url' },
   { table: 'audio_files', column: 'file_url' },
   { table: 'multitrack_files', column: 'file_url' },
 ]
@@ -246,7 +268,16 @@ async function updateDbUrls(pool: Pool, dryRun: boolean) {
 // --- main ---
 
 async function main() {
-  const { source, zip, dryRun, skipDb } = parseArgs()
+  const { source, zip, dryRun, skipDb, dbOnly } = parseArgs()
+
+  if (dbOnly) {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+    console.log('Updating database URLs only...')
+    await updateDbUrls(pool, dryRun)
+    await pool.end()
+    console.log(`\nDone. Public files URL base: ${process.env.NEXT_PUBLIC_STORAGE_URL}`)
+    return
+  }
 
   let workDir = source
   let tempDir = ''
@@ -292,7 +323,8 @@ async function main() {
     if (k.startsWith('temp-chunks/')) keysToUpload.delete(k)
   }
 
-  console.log(`\nUploading ${keysToUpload.size} objects to MinIO...`)
+  const target = process.env.S3_ENDPOINT ? 'MinIO' : `S3 (${process.env.S3_REGION})`
+  console.log(`\nUploading ${keysToUpload.size} objects to ${target}...`)
   let uploaded = 0
   let missing = 0
 
@@ -323,7 +355,6 @@ async function main() {
 Done.
   Uploaded/skipped: ${uploaded}
   Missing in archive: ${missing}
-  MinIO console: http://localhost:9001
   Public files URL base: ${process.env.NEXT_PUBLIC_STORAGE_URL}
 `)
 }

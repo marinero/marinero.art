@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { fetchNormalizedComments, buildCommentTree } from '@/lib/comments-client'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
@@ -248,10 +249,10 @@ export default function EventPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative">
-          {event.image_url && (
+          {resolveAssetUrl(event.image_url) && (
             <div className="relative w-full h-64 md:h-96">
               <Image
-                src={event.image_url}
+                src={resolveAssetUrl(event.image_url)!}
                 alt={event.title}
                 fill
                 className="object-cover"
@@ -409,9 +410,9 @@ export default function EventPage() {
                         className="group block"
                       >
                         <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted border border-border group-hover:border-primary/50 transition-colors">
-                          {album.cover_image_url ? (
+                          {resolveAssetUrl(album.cover_image_url) ? (
                             <Image
-                              src={album.cover_image_url}
+                              src={resolveAssetUrl(album.cover_image_url)!}
                               alt={album.title}
                               fill
                               className="object-cover transition-transform group-hover:scale-105"
@@ -458,7 +459,7 @@ export default function EventPage() {
                           <div className="relative aspect-video bg-muted">
                             {thumbnail ? (
                               <img
-                                src={thumbnail}
+                                src={resolveAssetUrl(thumbnail) ?? thumbnail}
                                 alt={video.title}
                                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
                               />

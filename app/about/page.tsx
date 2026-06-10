@@ -13,6 +13,7 @@ import type {
 import { Disc3, Users, Clock } from 'lucide-react'
 import { PlatformIcon } from '@/components/platform-icon'
 import { pageMetadata } from '@/lib/metadata'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 
 export const metadata = pageMetadata({
   segments: ['О нас'],
@@ -128,10 +129,10 @@ export default async function AboutPage() {
                 {discography.map((item) => (
                   <div key={item.id} className="group">
                     <div className="aspect-square rounded-xl overflow-hidden bg-secondary border border-border">
-                      {item.cover_image_url ? (
+                      {resolveAssetUrl(item.cover_image_url) ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={item.cover_image_url}
+                          src={resolveAssetUrl(item.cover_image_url)!}
                           alt={item.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />
@@ -233,10 +234,10 @@ function MemberGrid({ members }: { members: BandMember[] }) {
           className="flex gap-4 p-4 rounded-xl bg-background border border-border"
         >
           <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-secondary">
-            {member.photo_url ? (
+            {resolveAssetUrl(member.photo_url) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={member.photo_url}
+                src={resolveAssetUrl(member.photo_url)!}
                 alt={member.name}
                 className="w-full h-full object-cover"
               />

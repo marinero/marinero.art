@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight, Camera } from 'lucide-react'
 import { db } from '@/lib/db'
 import type { Photo } from '@/lib/types'
+import { resolveAssetUrl } from '@/lib/storage-keys'
 
 const demoPhotos = [
   '/images/marinero/hero_bg.jpg',
@@ -25,7 +26,7 @@ export async function GalleryPreview() {
   const displayPhotos = photos.length
     ? photos.map((photo) => ({
         id: photo.id,
-        url: photo.thumbnail_url || photo.url,
+        url: resolveAssetUrl(photo.thumbnail_url || photo.url) ?? (photo.thumbnail_url || photo.url),
         alt: photo.caption || 'MARINERO фото',
       }))
     : demoPhotos.map((url, index) => ({
