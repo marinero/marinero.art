@@ -14,7 +14,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # t3.small (2 GB): webpack uses less RAM than default Turbopack build
 ENV NODE_OPTIONS="--max-old-space-size=1536"
-RUN pnpm build -- --webpack
+RUN pnpm exec next build --webpack
 
 FROM base AS runner
 ENV NODE_ENV=production
