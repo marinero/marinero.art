@@ -35,7 +35,7 @@ debug-screenshot.png
 # backups & dumps (restore manually on server)
 full_backup.sql
 data.sql
-BackUp/
+/BackUp/
 
 # temp / local assets
 temp_images/
