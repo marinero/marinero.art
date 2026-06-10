@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+
+# build
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# env & secrets
+.env
+.env.*
+!.env.production.example
+!.env.local.example
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# logs & debug
+npm-debug.log*
+pnpm-debug.log*
+debug-screenshot.png
+
+# backups & dumps (restore manually on server)
+full_backup.sql
+data.sql
+BackUp/
+
+# temp / local assets
+temp_images/
+
+# cursor
+.cursor/

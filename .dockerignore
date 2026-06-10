@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.gitignore
+.env*
+!.env.production.example
+*.md
+terminals
+full_backup.sql
+BackUp
