@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
+import { adminRehearsalUrl } from '@/lib/rehearsal-url'
 
 export async function GET() {
   const authResult = await requireAdmin()
@@ -121,7 +122,9 @@ export async function GET() {
         section_url = '/admin/rehearsals'
         object_name = audioFile?.filename || 'Аудио файл'
         object_url = rehearsal
-          ? `/admin/rehearsals/${rehearsal.id}`
+          ? adminRehearsalUrl(rehearsal.rehearsal_date, {
+              audio: c.object_id || undefined,
+            })
           : '/admin/rehearsals'
         break
       }
@@ -143,7 +146,7 @@ export async function GET() {
           ? `Репетиция ${rehearsal.rehearsal_date}`
           : 'Репетиция'
         object_url = rehearsal
-          ? `/admin/rehearsals/${rehearsal.id}`
+          ? adminRehearsalUrl(rehearsal.rehearsal_date)
           : '/admin/rehearsals'
         break
       }

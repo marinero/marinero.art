@@ -24,6 +24,7 @@ import { ru } from 'date-fns/locale'
 import Link from 'next/link'
 import { MultitrackPlayer } from '@/components/multitrack'
 import { resolveAudioUrl } from '@/lib/storage-keys'
+import { adminRehearsalUrl } from '@/lib/rehearsal-url'
 import type { AudioFile, Video, MultitrackGroup } from '@/lib/types'
 
 export interface RehearsalTake {
@@ -169,7 +170,7 @@ export function SongRehearsals({
                   <div className="flex items-center gap-2 pb-2 border-b">
                     <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                     <Link
-                      href={`/admin/rehearsals/${take.rehearsal_id}`}
+                      href={adminRehearsalUrl(take.rehearsal_date)}
                       className="font-display font-semibold hover:text-primary transition-colors"
                     >
                       Репетиция{' '}
@@ -182,7 +183,6 @@ export function SongRehearsals({
                     <AudioTrack
                       key={file.id}
                       file={file}
-                      rehearsalId={take.rehearsal_id}
                       currentUserId={currentUserId}
                     />
                   ))}
@@ -275,11 +275,9 @@ async function notifyReply(
 
 function AudioTrack({
   file,
-  rehearsalId,
   currentUserId,
 }: {
   file: AudioFile & { rehearsal_date: string }
-  rehearsalId: string
   currentUserId: string | null
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -347,7 +345,7 @@ function AudioTrack({
         parentId,
         content,
         'audio',
-        `/admin/rehearsals/${rehearsalId}?audio=${file.id}`
+        adminRehearsalUrl(file.rehearsal_date, { audio: file.id })
       )
       setReplyText('')
       setReplyingTo(null)

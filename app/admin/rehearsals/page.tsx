@@ -19,6 +19,7 @@ import {
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
+import { adminRehearsalUrl, rehearsalDateSlug } from '@/lib/rehearsal-url'
 
 interface Rehearsal {
   id: string
@@ -94,12 +95,15 @@ export default function RehearsalsPage() {
     loadRehearsals()
   }
 
-  async function deleteRehearsal(id: string) {
+  async function deleteRehearsal(rehearsal: Rehearsal) {
     if (!confirm('Удалить репетицию и все связанные файлы?')) return
 
-    const response = await fetch(`/api/admin/rehearsals/${id}`, {
-      method: 'DELETE',
-    })
+    const response = await fetch(
+      `/api/admin/rehearsals/${encodeURIComponent(rehearsalDateSlug(rehearsal.rehearsal_date))}`,
+      {
+        method: 'DELETE',
+      }
+    )
 
     if (!response.ok) {
       alert('Ошибка удаления')
@@ -204,7 +208,7 @@ export default function RehearsalsPage() {
                   </div>
 
                   <div className="flex items-center gap-2 sm:ml-4 sm:flex-shrink-0">
-                    <Link href={`/admin/rehearsals/${rehearsal.id}`} className="flex-1 sm:flex-initial">
+                    <Link href={adminRehearsalUrl(rehearsal.rehearsal_date)} className="flex-1 sm:flex-initial">
                       <Button variant="outline" size="sm" className="gap-1 w-full sm:w-auto">
                         Открыть
                         <ChevronRight className="h-4 w-4" />
@@ -214,7 +218,7 @@ export default function RehearsalsPage() {
                       variant="ghost"
                       size="icon"
                       className="text-destructive hover:text-destructive flex-shrink-0"
-                      onClick={() => deleteRehearsal(rehearsal.id)}
+                      onClick={() => deleteRehearsal(rehearsal)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

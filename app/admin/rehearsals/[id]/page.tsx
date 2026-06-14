@@ -75,6 +75,7 @@ import type { Video as VideoType } from '@/lib/types'
 import type { MultitrackGroup } from '@/lib/types'
 import { MultitrackPlayer, MultitrackUploadDialog } from '@/components/multitrack'
 import { resolveAssetUrl, resolveAudioUrl } from '@/lib/storage-keys'
+import { adminRehearsalUrl, isUuid, rehearsalDateSlug } from '@/lib/rehearsal-url'
 
 interface AudioFile {
   id: string
@@ -226,6 +227,16 @@ export default function RehearsalDetailPage() {
   useEffect(() => {
     loadRehearsal()
   }, [routeId])
+
+  useEffect(() => {
+    if (!rehearsal || !isUuid(routeId)) return
+
+    const dateSlug = rehearsalDateSlug(rehearsal.rehearsal_date)
+    if (routeId === dateSlug) return
+
+    const search = window.location.search
+    router.replace(`${adminRehearsalUrl(rehearsal.rehearsal_date)}${search}`)
+  }, [rehearsal, routeId, router])
 
   // Load YouTube IFrame API script
   useEffect(() => {
@@ -460,7 +471,9 @@ export default function RehearsalDetailPage() {
   async function loadRehearsal() {
     setLoading(true)
 
-    const response = await fetch(`/api/admin/rehearsals/${encodeURIComponent(routeId)}`)
+    const response = await fetch(
+      `/api/admin/rehearsals/${encodeURIComponent(routeId)}`
+    )
 
     if (!response.ok) {
       router.push('/admin/rehearsals')
@@ -579,7 +592,7 @@ export default function RehearsalDetailPage() {
             parentCommentId: videoReplyingTo,
             replyContent: replyContentForEmail,
             contextType: 'video',
-            contextUrl: `/admin/rehearsals/${rehearsalId ?? routeId}`,
+            contextUrl: adminRehearsalUrl(rehearsal!.rehearsal_date),
           }),
         })
       } catch (notifyError) {
@@ -794,7 +807,7 @@ export default function RehearsalDetailPage() {
           parentCommentId: replyingTo,
           replyContent: replyContentForEmail,
           contextType: 'rehearsal',
-          contextUrl: `/admin/rehearsals/${rehearsalId ?? routeId}`,
+          contextUrl: adminRehearsalUrl(rehearsal!.rehearsal_date),
         }),
       })
     } catch (notifyError) {
@@ -871,7 +884,7 @@ export default function RehearsalDetailPage() {
           parentCommentId: audioReplyingTo,
           replyContent: replyContentForEmail,
           contextType: 'audio',
-          contextUrl: `/admin/rehearsals/${rehearsalId ?? routeId}?audio=${audioFileId}`,
+          contextUrl: adminRehearsalUrl(rehearsal!.rehearsal_date, { audio: audioFileId }),
         }),
       })
     } catch (notifyError) {
