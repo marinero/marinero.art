@@ -157,47 +157,58 @@ export function SongRehearsals({
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-8">
+          <CardContent className="space-y-5">
             {rehearsals.length === 0 ? (
               <p className="text-muted-foreground text-center py-6">
                 Пока нет записей или мультитреков, привязанных к этой песне.
                 Привяжите их на странице репетиции.
               </p>
             ) : (
-              rehearsals.map((take) => (
-                <div key={take.rehearsal_id} className="space-y-4">
-                  {/* Rehearsal heading */}
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                    <Link
-                      href={adminRehearsalUrl(take.rehearsal_date)}
-                      className="font-display font-semibold hover:text-primary transition-colors"
-                    >
-                      Репетиция{' '}
-                      {format(new Date(take.rehearsal_date), 'd MMMM yyyy', { locale: ru })}
-                    </Link>
-                  </div>
+              rehearsals.map((take) => {
+                const takeCount = take.audio.length + take.multitracks.length
+                return (
+                  <section
+                    key={take.rehearsal_id}
+                    className="rounded-xl border border-border bg-secondary overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-primary/10 border-b border-primary/20">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
+                        <Link
+                          href={adminRehearsalUrl(take.rehearsal_date)}
+                          className="font-display font-semibold hover:text-primary transition-colors truncate"
+                        >
+                          Репетиция{' '}
+                          {format(new Date(take.rehearsal_date), 'd MMMM yyyy', { locale: ru })}
+                        </Link>
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
+                        {takeCount}{' '}
+                        {takeCount === 1 ? 'запись' : takeCount < 5 ? 'записи' : 'записей'}
+                      </span>
+                    </div>
 
-                  {/* Audio recordings */}
-                  {take.audio.map((file) => (
-                    <AudioTrack
-                      key={file.id}
-                      file={file}
-                      currentUserId={currentUserId}
-                    />
-                  ))}
+                    <div className="p-2 space-y-2">
+                      {take.audio.map((file) => (
+                        <AudioTrack
+                          key={file.id}
+                          file={file}
+                          currentUserId={currentUserId}
+                        />
+                      ))}
 
-                  {/* Multitracks */}
-                  {take.multitracks.map((group) => (
-                    <MultitrackPlayer
-                      key={group.id}
-                      group={group}
-                      currentUserId={currentUserId}
-                      isAdmin={true}
-                    />
-                  ))}
-                </div>
-              ))
+                      {take.multitracks.map((group) => (
+                        <MultitrackPlayer
+                          key={group.id}
+                          group={group}
+                          currentUserId={currentUserId}
+                          isAdmin={true}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )
+              })
             )}
           </CardContent>
         </Card>
@@ -359,8 +370,8 @@ function AudioTrack({
   }
 
   return (
-    <Card className="border-border">
-      <CardContent className="p-4 space-y-3">
+    <Card className="border-border/70 bg-background/50 py-0 gap-0 shadow-none">
+      <CardContent className="px-3 py-1.5 space-y-2">
         <audio
           ref={audioRef}
           src={resolveAudioUrl(file.file_url) || undefined}
@@ -373,32 +384,31 @@ function AudioTrack({
           onEnded={() => setIsPlaying(false)}
         />
 
-        <div className="flex items-center gap-3">
-          <Button
-            size="icon"
-            className="h-10 w-10 rounded-full shrink-0"
-            onClick={togglePlay}
-          >
-            {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-          </Button>
-          <div className="flex items-center gap-2 min-w-0">
-            <Music className="h-4 w-4 text-muted-foreground shrink-0" />
-            <p className="font-medium truncate">{file.filename}</p>
-          </div>
+        <div className="flex items-center gap-2 min-w-0">
+          <Music className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <p className="text-sm font-medium truncate">{file.filename}</p>
         </div>
 
-        {/* Progress */}
-        <div className="space-y-1">
-          <Slider
-            value={[currentTime]}
-            max={duration && isFinite(duration) ? duration : 100}
-            step={1}
-            onValueChange={(v) => seekTo(v[0])}
-            className="cursor-pointer"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{formatTime(currentTime)}</span>
-            <span>{duration > 0 && isFinite(duration) ? formatTime(duration) : '--:--'}</span>
+        <div className="flex items-start gap-2.5">
+          <Button
+            size="icon"
+            className="h-8 w-8 rounded-full shrink-0 mt-1"
+            onClick={togglePlay}
+          >
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </Button>
+          <div className="flex-1 min-w-0 pt-1 pb-0.5">
+            <Slider
+              value={[currentTime]}
+              max={duration && isFinite(duration) ? duration : 100}
+              step={1}
+              onValueChange={(v) => seekTo(v[0])}
+              className="cursor-pointer"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
+              <span>{formatTime(currentTime)}</span>
+              <span>{duration > 0 && isFinite(duration) ? formatTime(duration) : '--:--'}</span>
+            </div>
           </div>
         </div>
 
@@ -690,7 +700,7 @@ function CommentList({
   if (comments.length === 0) return null
 
   return (
-    <div className="space-y-2 pt-3 border-t">
+    <div className="space-y-2 pt-2 border-t">
       <h4 className="text-xs font-medium text-muted-foreground flex items-center gap-1">
         <MessageSquare className="h-3 w-3" />
         Комментарии ({comments.reduce((acc, c) => acc + 1 + c.replies.length, 0)})
