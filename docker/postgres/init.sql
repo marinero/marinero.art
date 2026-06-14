@@ -128,13 +128,16 @@ CREATE TABLE IF NOT EXISTS "multitrack_files" (
 
 CREATE TABLE IF NOT EXISTS "audio_files" (
     "id"               uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    "title"            text NOT NULL,
-    "slug"             text UNIQUE,
+    "rehearsal_id"     uuid NOT NULL REFERENCES rehearsals(id) ON DELETE CASCADE,
     "file_url"         text NOT NULL,
+    "filename"         text NOT NULL,
     "duration_seconds" numeric,
+    "created_at"       timestamp with time zone DEFAULT now(),
+    -- legacy columns kept for compatibility with older dumps
+    "title"            text,
+    "slug"             text UNIQUE,
     "is_published"     boolean DEFAULT false,
     "order_index"      integer DEFAULT 0,
-    "created_at"       timestamp with time zone DEFAULT now(),
     "updated_at"       timestamp with time zone DEFAULT now()
 );
 

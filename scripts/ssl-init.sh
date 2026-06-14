@@ -12,7 +12,8 @@ echo "==> Starting nginx (HTTP only) for ACME challenge..."
 docker compose -f "$COMPOSE_FILE" up -d nginx
 
 echo "==> Requesting certificate for $DOMAIN and www.$DOMAIN..."
-docker compose -f "$COMPOSE_FILE" run --rm certbot certonly \
+# certbot service overrides entrypoint with "certbot renew" — force certonly
+docker compose -f "$COMPOSE_FILE" run --rm --entrypoint certbot certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
   --email "$EMAIL" \

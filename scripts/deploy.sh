@@ -36,8 +36,17 @@ if $FIRST_RUN && [ -f full_backup.sql ]; then
   echo "==> Restoring database from full_backup.sql (first run)..."
   docker compose -f "$COMPOSE_FILE" exec -T postgres \
     sh -c 'until pg_isready -U marinero -d marinero; do sleep 1; done'
+  # init.sql may seed rows (e.g. about_content) — clear before data restore
+  echo "==> Clearing seed data from init.sql..."
   docker compose -f "$COMPOSE_FILE" exec -T postgres \
-    psql -U marinero -d marinero <full_backup.sql
+    psql -v ON_ERROR_STOP=1 -U marinero -d marinero -c "
+      DO \$\$ DECLARE r RECORD; BEGIN
+        FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+          EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' RESTART IDENTITY CASCADE';
+        END LOOP;
+      END \$\$;"
+  docker compose -f "$COMPOSE_FILE" exec -T postgres \
+    psql -v ON_ERROR_STOP=1 -U marinero -d marinero <full_backup.sql
 elif $FIRST_RUN; then
   echo "==> First run without full_backup.sql — using init.sql schema only."
 fi
