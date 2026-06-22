@@ -300,29 +300,43 @@ function AudioTrack({
   const [commentTs, setCommentTs] = useState<number | null>(null)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchComments('audio', file.id).then(setComments)
   }, [file.id])
 
-  function togglePlay() {
+  async function togglePlay() {
     if (!audioRef.current) return
     if (isPlaying) {
       audioRef.current.pause()
       setIsPlaying(false)
-    } else {
-      audioRef.current.play()
+      return
+    }
+
+    setLoadError(null)
+    try {
+      await audioRef.current.play()
       setIsPlaying(true)
+    } catch (error) {
+      console.error('Audio playback failed:', error)
+      setLoadError('Не удалось воспроизвести файл')
+      setIsPlaying(false)
     }
   }
 
-  function seekTo(time: number) {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time
-      setCurrentTime(time)
-      if (!isPlaying) {
-        audioRef.current.play()
+  async function seekTo(time: number) {
+    if (!audioRef.current) return
+    audioRef.current.currentTime = time
+    setCurrentTime(time)
+    if (!isPlaying) {
+      setLoadError(null)
+      try {
+        await audioRef.current.play()
         setIsPlaying(true)
+      } catch (error) {
+        console.error('Audio playback failed:', error)
+        setLoadError('Не удалось воспроизвести файл')
       }
     }
   }
@@ -375,14 +389,22 @@ function AudioTrack({
         <audio
           ref={audioRef}
           src={resolveAudioUrl(file.file_url) || undefined}
-          preload="none"
+          preload="metadata"
           onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
           onLoadedMetadata={() => {
             const d = audioRef.current?.duration
             if (d && isFinite(d) && d > 0) setDuration(d)
           }}
           onEnded={() => setIsPlaying(false)}
+          onError={() => {
+            setLoadError('Не удалось загрузить аудио')
+            setIsPlaying(false)
+          }}
         />
+
+        {loadError && (
+          <p className="text-xs text-destructive">{loadError}</p>
+        )}
 
         <div className="flex items-center gap-2 min-w-0">
           <Music className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

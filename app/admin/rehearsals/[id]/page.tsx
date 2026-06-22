@@ -1008,18 +1008,42 @@ export default function RehearsalDetailPage() {
         setIsPlaying(false)
       } else {
         audioRef.current?.play()
-        setIsPlaying(true)
+          ?.then(() => setIsPlaying(true))
+          ?.catch((error) => {
+            console.error('Audio playback failed:', error)
+            setIsPlaying(false)
+          })
       }
     } else {
-  setCurrentAudio(audio)
-  setSelectedAudioId(audio.id)
-  setCurrentTime(0)
-  setDuration(audio.duration_seconds || 0) // Use duration from DB
+      setCurrentAudio(audio)
+      setSelectedAudioId(audio.id)
+      setCurrentTime(0)
+      setDuration(audio.duration_seconds || 0)
       setIsPlaying(true)
       if (audioRef.current) {
-        audioRef.current.src = resolveAudioUrl(audio.file_url) ?? audio.file_url
-        audioRef.current.load() // Ensure metadata is loaded
-        audioRef.current.play()
+        const el = audioRef.current
+        el.src = resolveAudioUrl(audio.file_url) ?? audio.file_url
+        el.load()
+
+        const handleCanPlay = () => {
+          el.play().catch((error) => {
+            console.error('Audio playback failed:', error)
+            setIsPlaying(false)
+          })
+          cleanup()
+        }
+        const handleError = () => {
+          console.error('Failed to load audio:', el.src)
+          setIsPlaying(false)
+          cleanup()
+        }
+        const cleanup = () => {
+          el.removeEventListener('canplay', handleCanPlay)
+          el.removeEventListener('error', handleError)
+        }
+
+        el.addEventListener('canplay', handleCanPlay)
+        el.addEventListener('error', handleError)
       }
     }
   }
@@ -1081,6 +1105,10 @@ export default function RehearsalDetailPage() {
           }
         }}
         onEnded={() => setIsPlaying(false)}
+        onError={() => {
+          console.error('Failed to load audio:', audioRef.current?.src)
+          setIsPlaying(false)
+        }}
         onCanPlay={() => {
           // Fallback: try to get duration when audio is ready to play
           const dur = audioRef.current?.duration

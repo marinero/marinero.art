@@ -1,3 +1,11 @@
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif)$/i
+const AUDIO_EXT = /\.(mp3|wav|ogg|m4a|flac|aac)$/i
+const STORAGE_KEY_PREFIX = /^(marinero\/|multitrack\/|temp-chunks\/)/
+
+function isStorageKey(key: string): boolean {
+  return STORAGE_KEY_PREFIX.test(key.replace(/^\/+/, ''))
+}
+
 /** Извлекает S3-ключ из URL в БД (legacy Vercel Blob или новый формат). */
 export function extractStorageKey(storedUrl: string): string | null {
   if (!storedUrl) return null
@@ -30,19 +38,15 @@ export function extractStorageKey(storedUrl: string): string | null {
     if (publicBase && storedUrl.startsWith(publicBase)) {
       return storedUrl.slice(publicBase.length).replace(/^\//, '')
     }
+
+    // Vercel Blob / virtual-hosted S3: pathname = marinero/audio/... или multitrack/...
+    const pathKey = decodeURIComponent(url.pathname.replace(/^\/+/, ''))
+    if (isStorageKey(pathKey)) return pathKey
   } catch {
     return null
   }
 
   return null
-}
-
-const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif)$/i
-const AUDIO_EXT = /\.(mp3|wav|ogg|m4a|flac|aac)$/i
-const STORAGE_KEY_PREFIX = /^(marinero\/|multitrack\/|temp-chunks\/)/
-
-function isStorageKey(key: string): boolean {
-  return STORAGE_KEY_PREFIX.test(key.replace(/^\/+/, ''))
 }
 
 /** Определяет бакет по пути файла в Blob/MinIO. */

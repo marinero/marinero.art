@@ -91,6 +91,58 @@ git pull
 ./scripts/deploy.sh
 ```
 
+## Troubleshooting
+
+### Фото работают, аудио / мультитреки не играют
+
+Симптом: на prod картинки из галереи открываются, а `/api/audio/stream` и `/api/file` для `marinero/audio/...` зависают или не отдают звук. Локально с MinIO всё ок.
+
+Причина: `marinero-public` доступен анонимно (bucket policy), а `marinero-private` требует AWS credentials. Контейнер `nextjs` на EC2 не получает IAM role через metadata — запросы к приватному бакету «висят».
+
+**Быстрый фикс** — добавить ключи в `.env.production` на сервере:
+
+```bash
+# на EC2, в /opt/marinero/.env.production
+S3_ACCESS_KEY_ID=...       # IAM user marinero-deploy
+S3_SECRET_ACCESS_KEY=...
+# S3_ENDPOINT не задавать!
+```
+
+```bash
+# restart НЕ подхватывает изменения .env.production — нужен recreate:
+docker compose -f docker-compose.prod.yml up -d --force-recreate nextjs
+```
+
+Проверка, что ключи попали в контейнер:
+
+```bash
+docker exec marinero_nextjs sh -c 'echo "S3 key set: ${S3_ACCESS_KEY_ID:+yes}"'
+```
+
+**Альтернатива** — увеличить hop limit для IMDS (чтобы Docker видел IAM role):
+
+```bash
+aws ec2 modify-instance-metadata-options --region eu-north-1 \
+  --instance-id i-0b960c6bff0999bf6 \
+  --http-put-response-hop-limit 3 \
+  --http-endpoint enabled --http-tokens required
+docker compose -f docker-compose.prod.yml restart nextjs
+```
+
+Проверка с Mac:
+
+```bash
+# должно вернуть HTTP 200 за < 2 сек (не зависать)
+curl -sI "https://marinero.art/api/audio/stream?key=marinero%2Faudio%2F1778946982781-z593f.mp3"
+```
+
+Диагностика на сервере:
+
+```bash
+ENV_FILE=.env.production pnpm storage:check-audio -- --limit 5
+docker compose -f docker-compose.prod.yml logs nextjs --tail 50
+```
+
 ## Git
 
 ```bash

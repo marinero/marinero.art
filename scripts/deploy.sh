@@ -55,7 +55,15 @@ echo "==> Applying migrations..."
 bash scripts/run-migrations.sh
 
 echo "==> Starting application stack..."
+# --force-recreate: подхватить изменения .env.production (restart их не применяет)
+docker compose -f "$COMPOSE_FILE" up -d --force-recreate nextjs
 docker compose -f "$COMPOSE_FILE" up -d
+
+echo "==> Checking S3 credentials inside nextjs container..."
+if ! docker exec marinero_nextjs sh -c 'test -n "$S3_ACCESS_KEY_ID" && test -n "$S3_SECRET_ACCESS_KEY"'; then
+  echo "WARNING: S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY missing in container."
+  echo "         Add them to .env.production and re-run deploy."
+fi
 
 echo "==> Status:"
 docker compose -f "$COMPOSE_FILE" ps
