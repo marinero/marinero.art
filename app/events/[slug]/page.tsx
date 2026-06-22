@@ -9,7 +9,8 @@ import { resolveAssetUrl } from '@/lib/storage-keys'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { CommentInput } from '@/components/comments/comment-input'
+import { CommentContent } from '@/components/comments/comment-content'
 import {
   ArrowLeft,
   Calendar,
@@ -511,9 +512,9 @@ export default function EventPage() {
                 {/* Comment form */}
                 {user ? (
                   <form onSubmit={submitComment} className="flex gap-3 mb-6">
-                    <Input
+                    <CommentInput
                       value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
+                      onChange={setNewComment}
                       placeholder="Написать комментарий..."
                       className="flex-1"
                       disabled={submitting}
@@ -567,7 +568,7 @@ export default function EventPage() {
                                 {format(new Date(comment.created_at), 'd MMM, HH:mm', { locale: ru })}
                               </span>
                             </div>
-                            <p className="text-sm text-foreground/90">{comment.content}</p>
+                            <p className="text-sm text-foreground/90"><CommentContent content={comment.content} /></p>
                             {/* Reply button */}
                             {user && (
                               <button
@@ -592,9 +593,9 @@ export default function EventPage() {
                         {/* Inline reply form */}
                         {replyingTo === comment.id && (
                           <form onSubmit={submitReply} className="flex gap-2 ml-8">
-                            <Input
+                            <CommentInput
                               value={replyText}
-                              onChange={(e) => setReplyText(e.target.value)}
+                              onChange={setReplyText}
                               placeholder="Написать ответ..."
                               className="flex-1 h-9 text-sm"
                               disabled={submitting}
@@ -645,7 +646,7 @@ export default function EventPage() {
                                       {format(new Date(reply.created_at), 'd MMM, HH:mm', { locale: ru })}
                                     </span>
                                   </div>
-                                  <p className="text-sm text-foreground/90">{reply.content}</p>
+                                  <p className="text-sm text-foreground/90"><CommentContent content={reply.content} /></p>
                                 </div>
                                 {(user?.id === reply.user_id || isAdmin) && (
                                   <button

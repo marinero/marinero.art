@@ -44,7 +44,8 @@ import Link from 'next/link'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { CommentInput } from '@/components/comments/comment-input'
+import { CommentContent } from '@/components/comments/comment-content'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, MessageCircle, Send, Trash2, Loader2, Reply, Pencil, Check, Video as VideoIcon, Clock } from 'lucide-react'
 import { format } from 'date-fns'
@@ -379,28 +380,6 @@ export default function VideoPage() {
     })
   }
 
-  // Render comment content with clickable timestamps
-  function renderCommentWithTimestamps(content: string) {
-    const timestampRegex = /(\d{1,2}:\d{2}(?::\d{2})?)/g
-    const parts = content.split(timestampRegex)
-    
-    return parts.map((part, index) => {
-      const seconds = parseTimestamp(part)
-      if (seconds !== null) {
-        return (
-          <button
-            key={index}
-            onClick={() => seekToTime(seconds)}
-            className="text-primary hover:underline font-medium cursor-pointer"
-          >
-            {part}
-          </button>
-        )
-      }
-      return <span key={index}>{part}</span>
-    })
-  }
-
   async function handleSubmitComment(e: React.FormEvent) {
     e.preventDefault()
     if (!user || !video || !newComment.trim()) return
@@ -629,9 +608,9 @@ export default function VideoPage() {
                         </div>
                       )}
                       <form onSubmit={handleSubmitComment} className="flex gap-2">
-                        <Input
+                        <CommentInput
                           value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
+                          onChange={setNewComment}
                           placeholder="Написать комментарий..."
                           className="flex-1"
                         />
@@ -676,9 +655,9 @@ export default function VideoPage() {
                         <div className="group p-4 rounded-lg bg-secondary/30">
                           {editingCommentId === comment.id ? (
                             <div className="space-y-2">
-                              <Input
+                              <CommentInput
                                 value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
+                                onChange={setEditContent}
                                 className="text-sm"
                                 autoFocus
                               />
@@ -738,7 +717,9 @@ export default function VideoPage() {
                                   )}
                                 </div>
                               </div>
-                              <p className="text-sm mt-2">{renderCommentWithTimestamps(comment.content)}</p>
+                              <p className="text-sm mt-2">
+                                <CommentContent content={comment.content} onTimestampClick={seekToTime} />
+                              </p>
                               {user && (
                                 <button
                                   onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
@@ -755,9 +736,9 @@ export default function VideoPage() {
                         {/* Reply form */}
                         {replyingTo === comment.id && (
                           <form onSubmit={handleSubmitReply} className="flex gap-2 ml-6">
-                            <Input
+                            <CommentInput
                               value={replyText}
-                              onChange={(e) => setReplyText(e.target.value)}
+                              onChange={setReplyText}
                               placeholder="Ответ..."
                               className="flex-1 h-9 text-sm"
                               disabled={submitting}
@@ -776,9 +757,9 @@ export default function VideoPage() {
                               <div key={reply.id} className="group p-3 rounded-lg bg-secondary/20">
                                 {editingCommentId === reply.id ? (
                                   <div className="space-y-2">
-                                    <Input
+                                    <CommentInput
                                       value={editContent}
-                                      onChange={(e) => setEditContent(e.target.value)}
+                                      onChange={setEditContent}
                                       className="text-xs h-8"
                                       autoFocus
                                     />
@@ -838,7 +819,9 @@ export default function VideoPage() {
                                         )}
                                       </div>
                                     </div>
-                                    <p className="text-xs mt-1">{renderCommentWithTimestamps(reply.content)}</p>
+                                    <p className="text-xs mt-1">
+                                      <CommentContent content={reply.content} onTimestampClick={seekToTime} />
+                                    </p>
                                   </>
                                 )}
                               </div>

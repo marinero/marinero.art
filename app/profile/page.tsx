@@ -8,6 +8,7 @@ import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { ProfileNav } from '@/components/profile/profile-nav'
 import { User, Mail, LogOut, Save, Loader2 } from 'lucide-react'
 import type { Profile } from '@/lib/types'
 
@@ -101,6 +102,8 @@ export default function ProfilePage() {
             <h1 className="text-3xl font-bold">Профиль</h1>
             <p className="text-muted-foreground">Управление вашим аккаунтом</p>
           </div>
+
+          <ProfileNav />
 
           <Card>
             <CardHeader>

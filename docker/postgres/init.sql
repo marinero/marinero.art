@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS "profiles" (
     "display_name" text,
     "avatar_url"   text,
     "role"         text DEFAULT 'fan' CHECK (role IN ('fan', 'admin')),
+    "comment_activity_seen_at" timestamp with time zone,
     "created_at"   timestamp with time zone DEFAULT now(),
     "updated_at"   timestamp with time zone DEFAULT now()
 );
@@ -307,5 +308,18 @@ ALTER TABLE "multitrack_groups"
     ADD COLUMN IF NOT EXISTS "song_text_id" uuid REFERENCES song_texts(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS audio_files_song_text_id_idx ON audio_files(song_text_id);
+
+-- ============================================================
+-- Site-wide settings (not tied to user profiles)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS "site_settings" (
+    "key"        text PRIMARY KEY,
+    "value"      jsonb NOT NULL DEFAULT '{}',
+    "updated_at" timestamp with time zone DEFAULT now()
+);
+
+INSERT INTO "site_settings" ("key", "value")
+VALUES ('notifications', '{"mention_email_enabled": true}'::jsonb)
+ON CONFLICT ("key") DO NOTHING;
 CREATE INDEX IF NOT EXISTS videos_song_text_id_idx ON videos(song_text_id);
 CREATE INDEX IF NOT EXISTS multitrack_groups_song_text_id_idx ON multitrack_groups(song_text_id);

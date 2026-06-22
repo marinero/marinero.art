@@ -13,6 +13,7 @@ import {
   Images,
   Link as LinkIcon,
   Users,
+  Settings,
   LogOut,
   Menu,
   X,
@@ -39,6 +40,7 @@ const navItems = [
   { href: '/admin/comments', label: 'Комментарии', icon: MessageSquare },
   { href: '/admin/links', label: 'Ссылки', icon: LinkIcon },
   { href: '/admin/users', label: 'Пользователи', icon: Users },
+  { href: '/admin/settings', label: 'Настройки', icon: Settings },
 ]
 
 interface AdminSidebarProps {

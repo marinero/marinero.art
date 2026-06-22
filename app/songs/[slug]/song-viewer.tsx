@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { CommentInput } from '@/components/comments/comment-input'
+import { CommentContent } from '@/components/comments/comment-content'
 import { ChordDiagram } from '@/components/songs/chord-diagram'
 import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
@@ -259,8 +260,8 @@ export function SongViewer({ song, chords }: SongViewerProps) {
       </Card>
 
       {/* Comments Section */}
-      <Card>
-        <CardContent className="p-6">
+      <Card className="overflow-visible">
+        <CardContent className="p-6 overflow-visible">
           <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-primary" />
             Комментарии
@@ -274,9 +275,9 @@ export function SongViewer({ song, chords }: SongViewerProps) {
           {/* Comment form */}
           {user ? (
             <form onSubmit={submitComment} className="flex gap-3 mb-6">
-              <Input
+              <CommentInput
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onChange={setNewComment}
                 placeholder="Написать комментарий..."
                 className="flex-1"
                 disabled={submitting}
@@ -328,7 +329,7 @@ export function SongViewer({ song, chords }: SongViewerProps) {
                           {format(new Date(comment.created_at), 'd MMM, HH:mm', { locale: ru })}
                         </span>
                       </div>
-                      <p className="text-sm">{comment.content}</p>
+                      <p className="text-sm"><CommentContent content={comment.content} /></p>
                       <div className="flex gap-2 mt-2">
                         {user && (
                           <button
@@ -355,9 +356,9 @@ export function SongViewer({ song, chords }: SongViewerProps) {
                   {/* Reply form */}
                   {replyingTo === comment.id && (
                     <form onSubmit={submitReply} className="flex gap-2 ml-8">
-                      <Input
+                      <CommentInput
                         value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
+                        onChange={setReplyText}
                         placeholder="Ответ..."
                         className="flex-1"
                         disabled={submitting}
@@ -397,7 +398,7 @@ export function SongViewer({ song, chords }: SongViewerProps) {
                                 {format(new Date(reply.created_at), 'd MMM, HH:mm', { locale: ru })}
                               </span>
                             </div>
-                            <p className="text-sm">{reply.content}</p>
+                            <p className="text-sm"><CommentContent content={reply.content} /></p>
                             {(user?.id === reply.user_id || profile?.role === 'admin') && (
                               <button
                                 onClick={() => deleteComment(reply.id)}

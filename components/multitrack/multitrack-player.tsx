@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { CommentInput } from '@/components/comments/comment-input'
+import { CommentContent } from '@/components/comments/comment-content'
 import { Slider } from '@/components/ui/slider'
 import {
   Select,
@@ -653,10 +654,10 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
             )}
           </div>
           <div className="flex gap-2">
-            <Input
+            <CommentInput
               placeholder="Комментарий к мультитреку..."
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onChange={setNewComment}
               onKeyDown={(e) => e.key === 'Enter' && addComment()}
               disabled={!currentUserId}
             />
@@ -693,7 +694,7 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm">{comment.content}</p>
+                  <p className="text-sm"><CommentContent content={comment.content} /></p>
                   <p className="text-xs text-muted-foreground">
                     <AdminUserHoverCard
                       userId={comment.user_id}

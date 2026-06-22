@@ -2,6 +2,7 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { buildCommentThreads, type CommentRow } from '@/lib/comment-threads'
+import { sendCommentMentionNotifications } from '@/lib/comment-notifications'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -39,6 +40,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
+  const trimmedContent = content.trim()
+
   const created = await db.queryOne<{ id: string }>(
     `INSERT INTO comments (type, object_id, user_id, content, parent_id, timestamp_seconds)
      VALUES ($1, $2, $3, $4, $5, $6)
@@ -47,7 +50,7 @@ export async function POST(request: Request) {
       type,
       object_id ?? null,
       session.user.id,
-      content.trim(),
+      trimmedContent,
       parent_id ?? null,
       timestamp_seconds ?? null,
     ]
@@ -56,6 +59,15 @@ export async function POST(request: Request) {
   if (!created) {
     return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 })
   }
+
+  void sendCommentMentionNotifications({
+    authorId: session.user.id,
+    content: trimmedContent,
+    contextType: type,
+    contextId: object_id,
+  }).catch((error) => {
+    console.error('Failed to send mention notifications:', error)
+  })
 
   return NextResponse.json({ id: created.id })
 }

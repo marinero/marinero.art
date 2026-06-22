@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { CommentInput } from '@/components/comments/comment-input'
+import { CommentContent } from '@/components/comments/comment-content'
 import { Slider } from '@/components/ui/slider'
 import {
   Play,
@@ -169,7 +170,7 @@ export function SongRehearsals({
                 return (
                   <section
                     key={take.rehearsal_id}
-                    className="rounded-xl border border-border bg-secondary overflow-hidden"
+                    className="rounded-xl border border-border bg-secondary overflow-visible"
                   >
                     <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-primary/10 border-b border-primary/20">
                       <div className="flex items-center gap-2 min-w-0">
@@ -454,10 +455,10 @@ function AudioTrack({
                 </button>
               </span>
             )}
-            <Input
+            <CommentInput
               placeholder="Комментарий к записи..."
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onChange={setNewComment}
               onKeyDown={(e) => e.key === 'Enter' && addComment()}
               className="h-8"
             />
@@ -638,10 +639,10 @@ function VideoTrack({
         {/* Add comment */}
         {currentUserId && (
           <div className="flex gap-2">
-            <Input
+            <CommentInput
               placeholder="Комментарий к видео (метки 1:23 кликабельны)..."
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onChange={setNewComment}
               onKeyDown={(e) => e.key === 'Enter' && addComment()}
               className="h-8"
             />
@@ -661,34 +662,13 @@ function VideoTrack({
           onStartReply={(id) => setReplyingTo(replyingTo === id ? null : id)}
           onSubmitReply={addReply}
           onDelete={deleteComment}
-          renderContent={isPlayerReady || isYouTube ? renderWithTimestamps(seekVideoToTime) : undefined}
+          onContentTimestampClick={
+            isPlayerReady || isYouTube ? seekVideoToTime : undefined
+          }
         />
       </CardContent>
     </Card>
   )
-}
-
-// Render comment content with clickable inline timestamps (e.g. 1:23 / 01:02:03)
-function renderWithTimestamps(onClick: (seconds: number) => void) {
-  return function render(content: string) {
-    const regex = /(\d{1,2}:\d{2}(?::\d{2})?)/g
-    const parts = content.split(regex)
-    return parts.map((part, i) => {
-      const seconds = parseTimestamp(part)
-      if (seconds !== null) {
-        return (
-          <button
-            key={i}
-            onClick={() => onClick(seconds)}
-            className="text-primary hover:underline font-medium cursor-pointer"
-          >
-            {part}
-          </button>
-        )
-      }
-      return <span key={i}>{part}</span>
-    })
-  }
 }
 
 // ---------- shared comment list ----------
@@ -704,7 +684,7 @@ function CommentList({
   onSubmitReply,
   onDelete,
   onTimestampClick,
-  renderContent,
+  onContentTimestampClick,
 }: {
   comments: ApiComment[]
   currentUserId: string | null
@@ -716,7 +696,7 @@ function CommentList({
   onSubmitReply: (parentId: string) => void
   onDelete: (id: string) => void
   onTimestampClick?: (seconds: number) => void
-  renderContent?: (content: string) => React.ReactNode
+  onContentTimestampClick?: (seconds: number) => void
 }) {
   const canDelete = (authorId: string) => isAdmin || authorId === currentUserId
   if (comments.length === 0) return null
@@ -742,7 +722,10 @@ function CommentList({
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm break-words">
-                {renderContent ? renderContent(comment.content) : comment.content}
+                <CommentContent
+                  content={comment.content}
+                  onTimestampClick={onContentTimestampClick}
+                />
               </p>
               <p className="text-xs text-muted-foreground">
                 <span>{comment.user?.display_name || 'Пользователь'}</span>
@@ -773,9 +756,9 @@ function CommentList({
 
           {replyingTo === comment.id && (
             <div className="flex gap-2 ml-6">
-              <Input
+              <CommentInput
                 value={replyText}
-                onChange={(e) => onReplyTextChange(e.target.value)}
+                onChange={onReplyTextChange}
                 placeholder="Ответ..."
                 className="flex-1 h-8 text-sm"
                 onKeyDown={(e) => e.key === 'Enter' && onSubmitReply(comment.id)}
@@ -798,7 +781,10 @@ function CommentList({
                 <div key={reply.id} className="flex gap-2 p-2 rounded-lg bg-secondary/30">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm break-words">
-                      {renderContent ? renderContent(reply.content) : reply.content}
+                      <CommentContent
+                        content={reply.content}
+                        onTimestampClick={onContentTimestampClick}
+                      />
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       <span>{reply.user?.display_name || 'Пользователь'}</span>

@@ -7,7 +7,8 @@ import Link from 'next/link'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { CommentInput } from '@/components/comments/comment-input'
+import { CommentContent } from '@/components/comments/comment-content'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Calendar, X, ChevronLeft, ChevronRight, MessageCircle, Send, Trash2, Loader2, Reply, Pencil, Check } from 'lucide-react'
 import { format } from 'date-fns'
@@ -416,9 +417,9 @@ export default function AlbumPage() {
                       {editingCommentId === comment.id ? (
                         // Edit mode
                         <div className="space-y-2">
-                          <Input
+                          <CommentInput
                             value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
+                            onChange={setEditContent}
                             className="text-sm"
                             autoFocus
                           />
@@ -479,7 +480,7 @@ export default function AlbumPage() {
                               )}
                             </div>
                           </div>
-                          <p className="text-sm mt-1">{comment.content}</p>
+                          <p className="text-sm mt-1"><CommentContent content={comment.content} /></p>
                           {user && (
                             <button
                               onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
@@ -496,9 +497,9 @@ export default function AlbumPage() {
                     {/* Reply form */}
                     {replyingTo === comment.id && (
                       <form onSubmit={handleSubmitReply} className="flex gap-2 ml-4">
-                        <Input
+                        <CommentInput
                           value={replyText}
-                          onChange={(e) => setReplyText(e.target.value)}
+                          onChange={setReplyText}
                           placeholder="Ответ..."
                           className="flex-1 h-8 text-sm"
                           disabled={submitting}
@@ -518,9 +519,9 @@ export default function AlbumPage() {
                             {editingCommentId === reply.id ? (
                               // Edit mode for reply
                               <div className="space-y-2">
-                                <Input
+                                <CommentInput
                                   value={editContent}
-                                  onChange={(e) => setEditContent(e.target.value)}
+                                  onChange={setEditContent}
                                   className="text-xs h-7"
                                   autoFocus
                                 />
@@ -581,7 +582,7 @@ export default function AlbumPage() {
                                     )}
                                   </div>
                                 </div>
-                                <p className="text-xs mt-0.5">{reply.content}</p>
+                                <p className="text-xs mt-0.5"><CommentContent content={reply.content} /></p>
                               </>
                             )}
                           </div>
@@ -597,9 +598,9 @@ export default function AlbumPage() {
             <div className="p-4 border-t border-border">
               {user ? (
                 <form onSubmit={handleSubmitComment} className="flex gap-2">
-                  <Input
+                  <CommentInput
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
+                    onChange={setNewComment}
                     placeholder="Написать комментарий..."
                     className="flex-1"
                   />

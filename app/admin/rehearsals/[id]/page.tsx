@@ -33,6 +33,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CommentInput } from '@/components/comments/comment-input'
+import { CommentContent } from '@/components/comments/comment-content'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Slider } from '@/components/ui/slider'
@@ -433,28 +435,6 @@ export default function RehearsalDetailPage() {
         ytPlayerRef.current?.playVideo()
       }
     }
-  }
-
-  // Render comment content with clickable timestamps
-  function renderVideoCommentWithTimestamps(content: string) {
-    const timestampRegex = /(\d{1,2}:\d{2}(?::\d{2})?)/g
-    const parts = content.split(timestampRegex)
-    
-    return parts.map((part, index) => {
-      const seconds = parseTimestamp(part)
-      if (seconds !== null) {
-        return (
-          <button
-            key={index}
-            onClick={() => seekVideoToTime(seconds)}
-            className="text-primary hover:underline font-medium cursor-pointer"
-          >
-            {part}
-          </button>
-        )
-      }
-      return <span key={index}>{part}</span>
-    })
   }
 
   // Format timestamp for comment insertion
@@ -1271,10 +1251,10 @@ export default function RehearsalDetailPage() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Input
+                    <CommentInput
                       placeholder="Комментарий к аудио..."
                       value={newAudioComment}
-                      onChange={(e) => setNewAudioComment(e.target.value)}
+                      onChange={setNewAudioComment}
                       onKeyDown={(e) => e.key === 'Enter' && addAudioComment()}
                     />
                     <Button onClick={addAudioComment} size="icon">
@@ -1363,9 +1343,9 @@ export default function RehearsalDetailPage() {
                                 </Button>
                               </div>
                             )}
-                            <Input
+                            <CommentInput
                               value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
+                              onChange={setEditContent}
                               className="text-sm"
                               autoFocus
                             />
@@ -1393,7 +1373,7 @@ export default function RehearsalDetailPage() {
                               </Button>
                             )}
                             <div className="flex-1">
-                              <p className="text-sm">{comment.content}</p>
+                              <p className="text-sm"><CommentContent content={comment.content} /></p>
                               <p className="text-xs text-muted-foreground">
                                 <AdminUserHoverCard
                                   userId={comment.user_id || ''}
@@ -1438,9 +1418,9 @@ export default function RehearsalDetailPage() {
                       {/* Reply form for audio comment */}
                       {audioReplyingTo === comment.id && (
                         <div className="flex gap-2 ml-6">
-                          <Input
+                          <CommentInput
                             value={audioReplyText}
-                            onChange={(e) => setAudioReplyText(e.target.value)}
+                            onChange={setAudioReplyText}
                             placeholder="Ответ..."
                             className="flex-1 h-8 text-sm"
                             onKeyDown={(e) => e.key === 'Enter' && addAudioReply()}
@@ -1462,9 +1442,9 @@ export default function RehearsalDetailPage() {
                             <div key={reply.id} className="p-2 rounded-lg bg-secondary/30">
                               {editingCommentId === reply.id ? (
                                 <div className="space-y-2">
-                                  <Input
+                                  <CommentInput
                                     value={editContent}
-                                    onChange={(e) => setEditContent(e.target.value)}
+                                    onChange={setEditContent}
                                     className="text-sm h-8"
                                     autoFocus
                                   />
@@ -1481,7 +1461,7 @@ export default function RehearsalDetailPage() {
                               ) : (
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
-                                    <p className="text-sm">{reply.content}</p>
+                                    <p className="text-sm"><CommentContent content={reply.content} /></p>
                                     <p className="text-xs text-muted-foreground mt-1">
                                       <AdminUserHoverCard
                                         userId={reply.user_id || ''}
@@ -1646,7 +1626,9 @@ export default function RehearsalDetailPage() {
                                 ) : (
                                   <span className="text-muted-foreground/50 font-mono text-xs shrink-0 mt-0.5">--:--</span>
                                 )}
-                                <p className="text-muted-foreground line-clamp-1">{comment.content}</p>
+                                <p className="text-muted-foreground line-clamp-1">
+                                  <CommentContent content={comment.content} />
+                                </p>
                               </div>
                             ))}
                             {comments.length > 3 && (
@@ -1784,10 +1766,10 @@ export default function RehearsalDetailPage() {
                 {/* Add Video Comment */}
                 <div className="space-y-2">
                   <div className="flex gap-2">
-                    <Input
+                    <CommentInput
                       placeholder="Комментарий к видео..."
                       value={newVideoComment}
-                      onChange={(e) => setNewVideoComment(e.target.value)}
+                      onChange={setNewVideoComment}
                       onKeyDown={(e) => e.key === 'Enter' && addVideoComment()}
                     />
                     <Button onClick={addVideoComment} size="icon" disabled={!newVideoComment.trim()}>
@@ -1807,7 +1789,9 @@ export default function RehearsalDetailPage() {
                       <div key={comment.id} className="space-y-2">
                         <div className="flex gap-3 p-2 rounded-lg bg-secondary/50 group">
                           <div className="flex-1">
-                            <p className="text-sm">{renderVideoCommentWithTimestamps(comment.content)}</p>
+                            <p className="text-sm">
+                              <CommentContent content={comment.content} onTimestampClick={seekVideoToTime} />
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               <AdminUserHoverCard
                                 userId={comment.user_id || ''}
@@ -1842,9 +1826,9 @@ export default function RehearsalDetailPage() {
                         {/* Reply form */}
                         {videoReplyingTo === comment.id && (
                           <div className="flex gap-2 ml-6">
-                            <Input
+                            <CommentInput
                               value={videoReplyText}
-                              onChange={(e) => setVideoReplyText(e.target.value)}
+                              onChange={setVideoReplyText}
                               placeholder="Ответ..."
                               className="flex-1 h-8 text-sm"
                               onKeyDown={(e) => e.key === 'Enter' && addVideoReply()}
@@ -1866,7 +1850,9 @@ export default function RehearsalDetailPage() {
                               <div key={reply.id} className="p-2 rounded-lg bg-secondary/30 group">
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
-                                    <p className="text-sm">{renderVideoCommentWithTimestamps(reply.content)}</p>
+                                    <p className="text-sm">
+                                      <CommentContent content={reply.content} onTimestampClick={seekVideoToTime} />
+                                    </p>
                                     <p className="text-xs text-muted-foreground mt-1">
                                       <AdminUserHoverCard
                                         userId={reply.user_id || ''}
@@ -1980,10 +1966,11 @@ export default function RehearsalDetailPage() {
             <CardContent className="space-y-4">
               {/* Add Comment */}
               <div className="flex gap-2">
-                <Textarea
+                <CommentInput
+                  multiline
                   placeholder="Добавить комментарий..."
                   value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
+                  onChange={setNewComment}
                   className="min-h-[80px]"
                 />
               </div>
@@ -2003,9 +1990,9 @@ export default function RehearsalDetailPage() {
                         {editingCommentId === comment.id ? (
                           // Edit mode
                           <div className="space-y-2">
-                            <Input
+                            <CommentInput
                               value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
+                              onChange={setEditContent}
                               className="text-sm"
                               autoFocus
                             />
@@ -2023,7 +2010,7 @@ export default function RehearsalDetailPage() {
                           // View mode
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
-                              <p className="text-sm">{comment.content}</p>
+                              <p className="text-sm"><CommentContent content={comment.content} /></p>
                               <p className="text-xs text-muted-foreground mt-1">
                                 <AdminUserHoverCard
                                   userId={comment.user_id || ''}
@@ -2068,9 +2055,9 @@ export default function RehearsalDetailPage() {
                       {/* Reply form */}
                       {replyingTo === comment.id && (
                         <div className="flex gap-2 ml-6">
-                          <Input
+                          <CommentInput
                             value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
+                            onChange={setReplyText}
                             placeholder="Ответ..."
                             className="flex-1 h-8 text-sm"
                             onKeyDown={(e) => e.key === 'Enter' && addRehearsalReply()}
@@ -2093,9 +2080,9 @@ export default function RehearsalDetailPage() {
                               {editingCommentId === reply.id ? (
                                 // Edit mode for reply
                                 <div className="space-y-2">
-                                  <Input
+                                  <CommentInput
                                     value={editContent}
-                                    onChange={(e) => setEditContent(e.target.value)}
+                                    onChange={setEditContent}
                                     className="text-sm h-8"
                                     autoFocus
                                   />
@@ -2113,7 +2100,7 @@ export default function RehearsalDetailPage() {
                                 // View mode for reply
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
-                                    <p className="text-sm">{reply.content}</p>
+                                    <p className="text-sm"><CommentContent content={reply.content} /></p>
                                     <p className="text-xs text-muted-foreground mt-1">
                                       <AdminUserHoverCard
                                         userId={reply.user_id || ''}

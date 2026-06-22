@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { sendCommentMentionNotifications } from '@/lib/comment-notifications'
 
 async function attachProfiles<T extends { user_id: string }>(comments: T[]) {
   if (comments.length === 0) return []
@@ -75,6 +76,15 @@ export async function POST(request: Request) {
   if (!comment) {
     return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 })
   }
+
+  void sendCommentMentionNotifications({
+    authorId: session.user.id,
+    content: comment.content,
+    contextType: 'multitrack',
+    contextId: multitrack_group_id,
+  }).catch((error) => {
+    console.error('Failed to send mention notifications:', error)
+  })
 
   const [withProfile] = await attachProfiles([comment])
   return NextResponse.json(withProfile)
