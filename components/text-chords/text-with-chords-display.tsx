@@ -3,12 +3,17 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { splitTextWithChords } from '@/lib/text-chords'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ChordDiagram } from '@/components/songs/chord-diagram'
+import { Button } from '@/components/ui/button'
+import { Volume2 } from 'lucide-react'
 import type { Chord, CommentChord } from '@/lib/types'
 
 interface TextWithChordsDisplayProps {
   text: string
   chords: CommentChord[]
   chordMap: Map<string, Chord>
+  /** Called when the user presses "play" inside a chord's popover. */
   onChordClick?: (chord: Chord) => void
   activeChordId?: string
   /** Custom renderer for the text of a single line (e.g. @mentions). */
@@ -19,6 +24,7 @@ interface TextWithChordsDisplayProps {
 /**
  * Read-only rendering of text with chord names placed above characters.
  * The block is monospaced so `ch`-based positioning aligns with characters.
+ * Clicking a chord opens a popover with its fingering diagram and a play button.
  */
 export function TextWithChordsDisplay({
   text,
@@ -43,19 +49,49 @@ export function TextWithChordsDisplay({
                 {slice.chords.map((c) => {
                   const chord = chordMap.get(c.chord_id)
                   return (
-                    <button
+                    <span
                       key={c.position}
-                      type="button"
-                      onClick={() => chord && onChordClick?.(chord)}
-                      className={cn(
-                        'absolute top-0 cursor-pointer hover:text-primary/80 transition-colors',
-                        !onChordClick && 'cursor-default',
-                        activeChordId && chord?.id === activeChordId && 'underline'
-                      )}
+                      className="absolute top-0"
                       style={{ left: `${c.relativePosition}ch` }}
                     >
-                      {chord?.name ?? '?'}
-                    </button>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              'cursor-pointer hover:text-primary/80 transition-colors whitespace-nowrap',
+                              activeChordId && chord?.id === activeChordId && 'underline'
+                            )}
+                          >
+                            {chord?.name ?? '?'}
+                          </button>
+                        </PopoverTrigger>
+                        {chord && (
+                          <PopoverContent className="w-auto p-3" align="start">
+                            <div className="flex flex-col items-center gap-2">
+                              <ChordDiagram
+                                name={chord.name}
+                                fretPositions={chord.fret_positions as number[]}
+                                fingerPositions={chord.finger_positions as number[] | null}
+                                baseFret={chord.base_fret}
+                                size="md"
+                              />
+                              {onChordClick && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2 font-sans"
+                                  onClick={() => onChordClick(chord)}
+                                >
+                                  <Volume2 className="h-4 w-4" />
+                                  Воспроизвести
+                                </Button>
+                              )}
+                            </div>
+                          </PopoverContent>
+                        )}
+                      </Popover>
+                    </span>
                   )
                 })}
               </span>
