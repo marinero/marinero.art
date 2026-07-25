@@ -35,6 +35,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CommentInput } from '@/components/comments/comment-input'
 import { CommentContent } from '@/components/comments/comment-content'
+import { CommentChordComposer } from '@/components/comments/comment-chord-composer'
 import { useChordMap } from '@/hooks/use-chord-map'
 import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { Input } from '@/components/ui/input'
@@ -183,11 +184,13 @@ export default function RehearsalDetailPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [newComment, setNewComment] = useState('')
+  const [newCommentChords, setNewCommentChords] = useState<CommentChord[]>([])
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
   const [audioReplyingTo, setAudioReplyingTo] = useState<string | null>(null)
   const [audioReplyText, setAudioReplyText] = useState('')
   const [newAudioComment, setNewAudioComment] = useState('')
+  const [newAudioCommentChords, setNewAudioCommentChords] = useState<CommentChord[]>([])
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null)
   const [commentTimestamp, setCommentTimestamp] = useState<number | null>(null)
 
@@ -214,6 +217,7 @@ export default function RehearsalDetailPage() {
   const [currentVideo, setCurrentVideo] = useState<VideoType | null>(null)
   const [videoComments, setVideoComments] = useState<Comment[]>([])
   const [newVideoComment, setNewVideoComment] = useState('')
+  const [newVideoCommentChords, setNewVideoCommentChords] = useState<CommentChord[]>([])
   const [videoReplyingTo, setVideoReplyingTo] = useState<string | null>(null)
   const [videoReplyText, setVideoReplyText] = useState('')
   
@@ -544,11 +548,13 @@ export default function RehearsalDetailPage() {
         type: 'video',
         object_id: currentVideo.id,
         content: newVideoComment.trim(),
+        chords: newVideoCommentChords,
       }),
     })
 
     if (response.ok) {
       setNewVideoComment('')
+      setNewVideoCommentChords([])
       loadVideoComments(currentVideo.id)
     }
   }
@@ -752,6 +758,7 @@ export default function RehearsalDetailPage() {
         type: 'rehearsal',
         object_id: rehearsalId,
         content: newComment.trim(),
+        chords: newCommentChords,
       }),
     })
 
@@ -761,6 +768,7 @@ export default function RehearsalDetailPage() {
     }
 
     setNewComment('')
+    setNewCommentChords([])
     loadRehearsal()
   }
 
@@ -817,6 +825,7 @@ export default function RehearsalDetailPage() {
         object_id: selectedAudioId,
         content: newAudioComment.trim(),
         timestamp_seconds: commentTimestamp,
+        chords: newAudioCommentChords,
       }),
     })
 
@@ -826,6 +835,7 @@ export default function RehearsalDetailPage() {
     }
 
     setNewAudioComment('')
+    setNewAudioCommentChords([])
     setCommentTimestamp(null)
     loadRehearsal()
   }
@@ -1257,16 +1267,20 @@ export default function RehearsalDetailPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex gap-2">
-                    <CommentInput
+                  <div className="space-y-2">
+                    <CommentChordComposer
                       placeholder="Комментарий к аудио..."
                       value={newAudioComment}
                       onChange={setNewAudioComment}
-                      onKeyDown={(e) => e.key === 'Enter' && addAudioComment()}
+                      chords={newAudioCommentChords}
+                      onChordsChange={setNewAudioCommentChords}
                     />
-                    <Button onClick={addAudioComment} size="icon">
-                      <Send className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end">
+                      <Button onClick={addAudioComment} className="gap-2" disabled={!newAudioComment.trim()}>
+                        <Send className="h-4 w-4" />
+                        Отправить
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -1772,15 +1786,17 @@ export default function RehearsalDetailPage() {
 
                 {/* Add Video Comment */}
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <CommentInput
-                      placeholder="Комментарий к видео..."
-                      value={newVideoComment}
-                      onChange={setNewVideoComment}
-                      onKeyDown={(e) => e.key === 'Enter' && addVideoComment()}
-                    />
-                    <Button onClick={addVideoComment} size="icon" disabled={!newVideoComment.trim()}>
+                  <CommentChordComposer
+                    placeholder="Комментарий к видео..."
+                    value={newVideoComment}
+                    onChange={setNewVideoComment}
+                    chords={newVideoCommentChords}
+                    onChordsChange={setNewVideoCommentChords}
+                  />
+                  <div className="flex justify-end">
+                    <Button onClick={addVideoComment} className="gap-2" disabled={!newVideoComment.trim()}>
                       <Send className="h-4 w-4" />
+                      Отправить
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -1972,15 +1988,13 @@ export default function RehearsalDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Add Comment */}
-              <div className="flex gap-2">
-                <CommentInput
-                  multiline
-                  placeholder="Добавить комментарий..."
-                  value={newComment}
-                  onChange={setNewComment}
-                  className="min-h-[80px]"
-                />
-              </div>
+              <CommentChordComposer
+                placeholder="Добавить комментарий..."
+                value={newComment}
+                onChange={setNewComment}
+                chords={newCommentChords}
+                onChordsChange={setNewCommentChords}
+              />
               <Button onClick={addRehearsalComment} className="w-full gap-2">
                 <Send className="h-4 w-4" />
                 Отправить

@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { CommentInput } from '@/components/comments/comment-input'
 import { CommentContent } from '@/components/comments/comment-content'
+import { CommentChordComposer } from '@/components/comments/comment-chord-composer'
 import { Slider } from '@/components/ui/slider'
 import {
   Select,
@@ -27,7 +27,7 @@ import {
   RefreshCw,
   Download
 } from 'lucide-react'
-import type { MultitrackGroup, MultitrackFile, MultitrackComment, Profile } from '@/lib/types'
+import type { MultitrackGroup, MultitrackFile, MultitrackComment, Profile, CommentChord } from '@/lib/types'
 import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
 import { useChordMap } from '@/hooks/use-chord-map'
 import { useGuitarAudio } from '@/hooks/use-guitar-audio'
@@ -57,6 +57,7 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
   const [trackStates, setTrackStates] = useState<Record<string, TrackState>>({})
   const [comments, setComments] = useState<CommentWithProfile[]>([])
   const [newComment, setNewComment] = useState('')
+  const [newCommentChords, setNewCommentChords] = useState<CommentChord[]>([])
   const [commentTimestamp, setCommentTimestamp] = useState<number | null>(null)
   const [selectedTrackId, setSelectedTrackId] = useState<string>('all')
   const [loadingComments, setLoadingComments] = useState(true)
@@ -323,6 +324,7 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
           multitrack_group_id: group.id,
           content: newComment.trim(),
           timestamp_seconds: commentTimestamp,
+          chords: newCommentChords,
           solo_track_id:
             commentTimestamp !== null && selectedTrackId !== 'all'
               ? selectedTrackId
@@ -334,6 +336,7 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
         const comment = await response.json()
         setComments(prev => [...prev, comment])
         setNewComment('')
+        setNewCommentChords([])
         setCommentTimestamp(null)
         setSelectedTrackId('all')
       }
@@ -657,17 +660,21 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
               </span>
             )}
           </div>
-          <div className="flex gap-2">
-            <CommentInput
+          <div className="space-y-2">
+            <CommentChordComposer
               placeholder="Комментарий к мультитреку..."
               value={newComment}
               onChange={setNewComment}
-              onKeyDown={(e) => e.key === 'Enter' && addComment()}
+              chords={newCommentChords}
+              onChordsChange={setNewCommentChords}
               disabled={!currentUserId}
             />
-            <Button onClick={addComment} size="icon" disabled={!currentUserId}>
-              <Send className="h-4 w-4" />
-            </Button>
+            <div className="flex justify-end">
+              <Button onClick={addComment} className="gap-2" disabled={!currentUserId || !newComment.trim()}>
+                <Send className="h-4 w-4" />
+                Отправить
+              </Button>
+            </div>
           </div>
         </div>
 
