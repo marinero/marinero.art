@@ -33,8 +33,8 @@ export async function PATCH(
       name.trim(),
       root_note ?? null,
       chord_type ?? 'unknown',
-      fret_positions,
-      finger_positions ?? null,
+      JSON.stringify(fret_positions),
+      finger_positions ? JSON.stringify(finger_positions) : null,
       base_fret ?? 1,
     ]
   )

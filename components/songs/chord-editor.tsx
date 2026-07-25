@@ -127,8 +127,8 @@ export function ChordEditor({ chord, onSave, onCancel }: ChordEditorProps) {
         onSave?.(data as Chord)
         handleReset()
       }
-    } catch {
-      toast.error('Failed to save chord')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save chord')
     } finally {
       setIsSaving(false)
     }
