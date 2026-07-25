@@ -29,6 +29,14 @@ services:
       - .env.production
     environment:
       NODE_ENV: production
+      # Явно пробрасываем S3 — иначе после `docker restart` ключи из env_file не обновляются.
+      # deploy.sh / fix-prod-s3.sh должны запускать compose с --env-file .env.production
+      S3_REGION: ${S3_REGION:-eu-north-1}
+      S3_BUCKET_PUBLIC: ${S3_BUCKET_PUBLIC:-marinero-public}
+      S3_BUCKET_PRIVATE: ${S3_BUCKET_PRIVATE:-marinero-private}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?Set S3_ACCESS_KEY_ID in .env.production}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Set S3_SECRET_ACCESS_KEY in .env.production}
+      NEXT_PUBLIC_STORAGE_URL: ${NEXT_PUBLIC_STORAGE_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

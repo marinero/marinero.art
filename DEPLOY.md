@@ -31,6 +31,31 @@ pnpm dev                           # http://localhost:3000
 - IAM instance profile: `marinero-ec2-s3`
 - DNS: `marinero.art` и `www.marinero.art` → Elastic IP
 
+### SSH без постоянного добавления IP
+
+Домашний IP меняется — в `marinero-sg` (регион **eu-north-1**) whitelist только для SSH.
+
+**Вариант A — одна команда перед входом (рекомендуется сейчас):**
+
+```bash
+chmod +x scripts/ssh-allow-my-ip.sh
+./scripts/ssh-allow-my-ip.sh
+ssh -i AWS/marinero-prod.pem ubuntu@13.48.222.198
+```
+
+Скрипт добавляет текущий IP в `marinero-sg`. Старые IP можно иногда удалять в консоли вручную.
+
+**Вариант B — AWS Session Manager (без порта 22 с интернета):**
+
+1. IAM role `marinero-ec2-s3` → Attach policy `AmazonSSMManagedInstanceCore`
+2. Подождать ~5 мин, проверить: EC2 → Instances → marinero-prod → Connect → Session Manager
+3. С Mac: `aws ssm start-session --region eu-north-1 --target i-0b960c6bff0999bf6`
+4. После проверки можно убрать правило SSH (22) из `marinero-sg` для 0.0.0.0/0 (если было)
+
+**Вариант C — Tailscale на EC2:** VPN с постоянным адресом, SSH только внутри tailnet.
+
+**Не рекомендуется:** открыть SSH для `0.0.0.0/0` — брутфорс 24/7.
+
 ### 2. Первичная настройка сервера
 
 ```bash
@@ -93,33 +118,41 @@ git pull
 
 ## Troubleshooting
 
-### Фото работают, аудио / мультитреки не играют
+### Фото работают, аудио / загрузки не работают
 
-Симптом: на prod картинки из галереи открываются, а `/api/audio/stream` и `/api/file` для `marinero/audio/...` зависают или не отдают звук. Локально с MinIO всё ок.
+**S3 не «сломался»** — файлы на месте. Контейнер `nextjs` потерял ключи доступа к приватному бакету `marinero-private`.
 
-Причина: `marinero-public` доступен анонимно (bucket policy), а `marinero-private` требует AWS credentials. Контейнер `nextjs` на EC2 не получает IAM role через metadata — запросы к приватному бакету «висят».
+Симптом: фото из галереи открываются, `/api/audio/stream` зависает, загрузка аудио/мультитреков падает.
 
-**Быстрый фикс** — добавить ключи в `.env.production` на сервере:
+Причина: `docker compose restart` **не** обновляет переменные из `.env.production`. Ключи есть в файле, но не в контейнере.
 
-```bash
-# на EC2, в /opt/marinero/.env.production
-S3_ACCESS_KEY_ID=...       # IAM user marinero-deploy
-S3_SECRET_ACCESS_KEY=...
-# S3_ENDPOINT не задавать!
-```
+**Быстрый фикс на сервере:**
 
 ```bash
-# restart НЕ подхватывает изменения .env.production — нужен recreate:
-docker compose -f docker-compose.prod.yml up -d --force-recreate nextjs
+cd /home/ubuntu/marinero
+./scripts/fix-prod-s3.sh
 ```
 
-Проверка, что ключи попали в контейнер:
+Или вручную:
+
+```bash
+cd /home/ubuntu/marinero
+set -a && source .env.production && set +a
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --force-recreate nextjs
+```
+
+**Не используйте** `docker compose restart nextjs` после правки `.env.production`.
+
+**Проверка:**
 
 ```bash
 docker exec marinero_nextjs sh -c 'echo "S3 key set: ${S3_ACCESS_KEY_ID:+yes}"'
+curl -sI "http://localhost/api/audio/stream?key=marinero%2Faudio%2F1778946982781-z593f.mp3" | head -1
 ```
 
-**Альтернатива** — увеличить hop limit для IMDS (чтобы Docker видел IAM role):
+**SSH не пускает?** Security group `marinero-sg` в регионе **eu-north-1 (Stockholm)** — добавьте свой IP в правило SSH (22). Текущий IP: `curl ifconfig.me`.
+
+**Альтернатива** — hop limit для IMDS (без ключей в env): (чтобы Docker видел IAM role):
 
 ```bash
 aws ec2 modify-instance-metadata-options --region eu-north-1 \

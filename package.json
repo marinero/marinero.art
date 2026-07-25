@@ -13,6 +13,8 @@
     "users:migrate": "tsx scripts/migrate-supabase-users.ts",
     "db:backup": "tsx scripts/backup-database.ts",
     "deploy:prod": "docker compose -f docker-compose.prod.yml up -d --build",
+    "prod:fix-s3": "bash scripts/fix-prod-s3.sh",
+    "ssh:allow": "bash scripts/ssh-allow-my-ip.sh",
     "deploy:migrate": "bash scripts/run-migrations.sh"
   },
   "dependencies": {
