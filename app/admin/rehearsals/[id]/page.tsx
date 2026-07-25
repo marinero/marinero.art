@@ -68,7 +68,9 @@ import {
   ChevronDown,
   Video,
   Headphones,
-  Download
+  Download,
+  Volume2,
+  VolumeX
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -208,6 +210,7 @@ export default function RehearsalDetailPage() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState(1)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Video state
@@ -1052,6 +1055,17 @@ export default function RehearsalDetailPage() {
     }
   }
 
+  function handleVolumeChange(value: number) {
+    setVolume(value)
+    if (audioRef.current) {
+      audioRef.current.volume = value
+    }
+  }
+
+  function toggleMute() {
+    handleVolumeChange(volume === 0 ? 1 : 0)
+  }
+
   function formatTime(seconds: number): string {
     if (!isFinite(seconds) || isNaN(seconds)) {
       return '0:00'
@@ -1241,6 +1255,34 @@ export default function RehearsalDetailPage() {
                   >
                     +10
                   </Button>
+                </div>
+
+                {/* Volume */}
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={toggleMute}
+                    aria-label={volume === 0 ? 'Включить звук' : 'Выключить звук'}
+                  >
+                    {volume === 0 ? (
+                      <VolumeX className="h-4 w-4" />
+                    ) : (
+                      <Volume2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Slider
+                    value={[volume]}
+                    max={1}
+                    step={0.01}
+                    onValueChange={(value) => handleVolumeChange(value[0])}
+                    className="w-32 cursor-pointer"
+                    aria-label="Громкость"
+                  />
+                  <span className="text-xs text-muted-foreground w-9 text-right tabular-nums">
+                    {Math.round(volume * 100)}%
+                  </span>
                 </div>
 
                 {/* Add Comment at Timestamp */}
