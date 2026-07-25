@@ -56,7 +56,7 @@ export async function GET(
         [rehearsal.id]
       ),
       db.queryMany<CommentRow>(
-        `SELECT c.id, c.content, c.created_at, c.user_id, c.parent_id,
+        `SELECT c.id, c.content, c.created_at, c.user_id, c.parent_id, c.chords,
            p.display_name
          FROM comments c
          LEFT JOIN profiles p ON p.id = c.user_id
@@ -81,7 +81,7 @@ export async function GET(
   if (audioIds.length > 0) {
     audioCommentRows = await db.queryMany<CommentRow>(
       `SELECT c.id, c.object_id, c.content, c.timestamp_seconds, c.created_at,
-         c.user_id, c.parent_id, p.display_name
+         c.user_id, c.parent_id, c.chords, p.display_name
        FROM comments c
        LEFT JOIN profiles p ON p.id = c.user_id
        WHERE c.type = 'audio' AND c.object_id = ANY($1::uuid[])

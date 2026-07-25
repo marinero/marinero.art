@@ -4,7 +4,10 @@ import type { Chord, CommentChord } from '@/lib/types'
 import { TextWithChordsDisplay } from '@/components/text-chords/text-with-chords-display'
 import { MENTION_REGEX } from '@/lib/comment-mentions'
 
-const TIMESTAMP_TOKEN_REGEX = /(\d{1,2}:\d{2}(?::\d{2})?)/g
+const TIMESTAMP_TOKEN_REGEX = /(\d{1,2}:\d{2}(?::\d{2})?)/
+const URL_TOKEN_REGEX = /(https?:\/\/[^\s]+)/
+// Punctuation that commonly trails a URL in prose but isn't part of it.
+const URL_TRAILING_PUNCTUATION = /[.,;:!?)\]}'"»]+$/
 
 function parseTimestamp(value: string): number | null {
   const parts = value.split(':').map(Number)
@@ -24,36 +27,38 @@ type ContentToken =
   | { type: 'text'; value: string }
   | { type: 'mention'; value: string }
   | { type: 'timestamp'; value: string }
+  | { type: 'url'; value: string }
 
 function tokenizeContent(content: string, includeTimestamps: boolean): ContentToken[] {
-  const regex = includeTimestamps
-    ? new RegExp(`${MENTION_REGEX.source}|${TIMESTAMP_TOKEN_REGEX.source}`, 'g')
-    : new RegExp(MENTION_REGEX.source, 'g')
+  // Order matters: URLs are matched before timestamps so a URL containing
+  // digits and colons is not split apart.
+  const parts = [MENTION_REGEX.source, URL_TOKEN_REGEX.source]
+  if (includeTimestamps) parts.push(TIMESTAMP_TOKEN_REGEX.source)
+  const regex = new RegExp(parts.join('|'), 'g')
 
   const tokens: ContentToken[] = []
   let lastIndex = 0
 
   for (const match of content.matchAll(regex)) {
     const index = match.index ?? 0
+    const matchedText = match[0]
 
     if (index > lastIndex) {
       tokens.push({ type: 'text', value: content.slice(lastIndex, index) })
     }
 
-    const quotedMention = match[1]
-    const plainMention = match[2]
-    const timestamp = includeTimestamps ? match[3] : undefined
-
-    if (quotedMention || plainMention) {
-      tokens.push({
-        type: 'mention',
-        value: quotedMention ? `@"${quotedMention}"` : `@${plainMention}`,
-      })
-    } else if (timestamp) {
-      tokens.push({ type: 'timestamp', value: timestamp })
+    if (matchedText.startsWith('@')) {
+      tokens.push({ type: 'mention', value: matchedText })
+    } else if (/^https?:\/\//i.test(matchedText)) {
+      const trailing = matchedText.match(URL_TRAILING_PUNCTUATION)?.[0] ?? ''
+      const url = trailing ? matchedText.slice(0, -trailing.length) : matchedText
+      tokens.push({ type: 'url', value: url })
+      if (trailing) tokens.push({ type: 'text', value: trailing })
+    } else {
+      tokens.push({ type: 'timestamp', value: matchedText })
     }
 
-    lastIndex = index + match[0].length
+    lastIndex = index + matchedText.length
   }
 
   if (lastIndex < content.length) {
@@ -81,6 +86,20 @@ export function CommentText({
             <span key={index} className="font-medium text-primary">
               {token.value}
             </span>
+          )
+        }
+
+        if (token.type === 'url') {
+          return (
+            <a
+              key={index}
+              href={token.value}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary underline underline-offset-2 hover:text-primary/80 break-all"
+            >
+              {token.value}
+            </a>
           )
         }
 
