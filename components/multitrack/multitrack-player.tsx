@@ -29,6 +29,8 @@ import {
 } from 'lucide-react'
 import type { MultitrackGroup, MultitrackFile, MultitrackComment, Profile } from '@/lib/types'
 import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
+import { useChordMap } from '@/hooks/use-chord-map'
+import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { cn } from '@/lib/utils'
 
 interface MultitrackPlayerProps {
@@ -58,6 +60,8 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
   const [commentTimestamp, setCommentTimestamp] = useState<number | null>(null)
   const [selectedTrackId, setSelectedTrackId] = useState<string>('all')
   const [loadingComments, setLoadingComments] = useState(true)
+  const chordMap = useChordMap()
+  const { playArpeggio } = useGuitarAudio()
   const [regeneratingWaveforms, setRegeneratingWaveforms] = useState(false)
   const [localFiles, setLocalFiles] = useState(group.files || [])
   
@@ -694,7 +698,14 @@ export function MultitrackPlayer({ group, currentUserId, isAdmin, onDelete }: Mu
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm"><CommentContent content={comment.content} /></p>
+                  <div className="text-sm">
+                    <CommentContent
+                      content={comment.content}
+                      chords={comment.chords}
+                      chordMap={chordMap}
+                      onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])}
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     <AdminUserHoverCard
                       userId={comment.user_id}

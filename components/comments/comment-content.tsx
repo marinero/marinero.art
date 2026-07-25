@@ -1,5 +1,7 @@
 'use client'
 
+import type { Chord, CommentChord } from '@/lib/types'
+import { TextWithChordsDisplay } from '@/components/text-chords/text-with-chords-display'
 import { MENTION_REGEX } from '@/lib/comment-mentions'
 
 const TIMESTAMP_TOKEN_REGEX = /(\d{1,2}:\d{2}(?::\d{2})?)/g
@@ -61,21 +63,18 @@ function tokenizeContent(content: string, includeTimestamps: boolean): ContentTo
   return tokens
 }
 
-type CommentContentProps = {
-  content: string
-  onTimestampClick?: (seconds: number) => void
-  className?: string
-}
-
-export function CommentContent({
+/** Renders a plain string with styled @mentions and clickable timestamps. */
+export function CommentText({
   content,
   onTimestampClick,
-  className,
-}: CommentContentProps) {
+}: {
+  content: string
+  onTimestampClick?: (seconds: number) => void
+}) {
   const tokens = tokenizeContent(content, Boolean(onTimestampClick))
 
   return (
-    <span className={className}>
+    <>
       {tokens.map((token, index) => {
         if (token.type === 'mention') {
           return (
@@ -103,6 +102,45 @@ export function CommentContent({
 
         return <span key={index}>{token.value}</span>
       })}
+    </>
+  )
+}
+
+type CommentContentProps = {
+  content: string
+  chords?: CommentChord[] | null
+  chordMap?: Map<string, Chord>
+  onChordClick?: (chord: Chord) => void
+  onTimestampClick?: (seconds: number) => void
+  className?: string
+}
+
+export function CommentContent({
+  content,
+  chords,
+  chordMap,
+  onChordClick,
+  onTimestampClick,
+  className,
+}: CommentContentProps) {
+  if (chords && chords.length > 0 && chordMap) {
+    return (
+      <TextWithChordsDisplay
+        text={content}
+        chords={chords}
+        chordMap={chordMap}
+        onChordClick={onChordClick}
+        className={className}
+        renderText={(line) => (
+          <CommentText content={line} onTimestampClick={onTimestampClick} />
+        )}
+      />
+    )
+  }
+
+  return (
+    <span className={className}>
+      <CommentText content={content} onTimestampClick={onTimestampClick} />
     </span>
   )
 }

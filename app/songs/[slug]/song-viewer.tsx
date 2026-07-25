@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CommentInput } from '@/components/comments/comment-input'
 import { CommentContent } from '@/components/comments/comment-content'
+import { CommentChordComposer } from '@/components/comments/comment-chord-composer'
 import { ChordDiagram } from '@/components/songs/chord-diagram'
 import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
@@ -15,7 +15,8 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
 import { fetchNormalizedComments, buildCommentTree } from '@/lib/comments-client'
-import type { SongText, SongTextChord, Chord, Profile } from '@/lib/types'
+import { buildChordMap } from '@/lib/text-chords'
+import type { SongText, SongTextChord, Chord, CommentChord, Profile } from '@/lib/types'
 
 interface SongViewerProps {
   song: SongText
@@ -30,6 +31,7 @@ interface SongComment {
   user_name: string
   user_role: string
   parent_id: string | null
+  chords: CommentChord[] | null
   replies: SongComment[]
 }
 
@@ -43,9 +45,12 @@ export function SongViewer({ song, chords }: SongViewerProps) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [comments, setComments] = useState<SongComment[]>([])
   const [newComment, setNewComment] = useState('')
+  const [newCommentChords, setNewCommentChords] = useState<CommentChord[]>([])
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
+  const [replyChords, setReplyChords] = useState<CommentChord[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [commentChordMap, setCommentChordMap] = useState<Map<string, Chord>>(new Map())
   
   useEffect(() => {
     async function fetchData() {
@@ -62,6 +67,13 @@ export function SongViewer({ song, chords }: SongViewerProps) {
     fetchData()
   }, [song.id])
 
+  useEffect(() => {
+    fetch('/api/chords')
+      .then((res) => (res.ok ? res.json() : { chords: [] }))
+      .then((data) => setCommentChordMap(buildChordMap((data.chords ?? []) as Chord[])))
+      .catch(() => {})
+  }, [])
+
   const fetchComments = useCallback(async () => {
     const normalized = await fetchNormalizedComments('song', song.id)
     const flat: SongComment[] = normalized.map((c) => ({
@@ -72,6 +84,7 @@ export function SongViewer({ song, chords }: SongViewerProps) {
       parent_id: c.parent_id,
       user_name: c.profiles.display_name || c.profiles.username || 'Пользователь',
       user_role: c.profiles.role,
+      chords: c.chords ?? null,
       replies: [],
     }))
 
@@ -100,11 +113,13 @@ export function SongViewer({ song, chords }: SongViewerProps) {
         object_id: song.id,
         content: newComment.trim(),
         parent_id: null,
+        chords: newCommentChords,
       }),
     })
 
     if (res.ok) {
       setNewComment('')
+      setNewCommentChords([])
       fetchComments()
     }
     setSubmitting(false)
@@ -125,6 +140,7 @@ export function SongViewer({ song, chords }: SongViewerProps) {
         object_id: song.id,
         content: replyContentForEmail,
         parent_id: replyingTo,
+        chords: replyChords,
       }),
     })
 
@@ -146,6 +162,7 @@ export function SongViewer({ song, chords }: SongViewerProps) {
       }
 
       setReplyText('')
+      setReplyChords([])
       setReplyingTo(null)
       fetchComments()
     }
@@ -274,21 +291,25 @@ export function SongViewer({ song, chords }: SongViewerProps) {
 
           {/* Comment form */}
           {user ? (
-            <form onSubmit={submitComment} className="flex gap-3 mb-6">
-              <CommentInput
+            <form onSubmit={submitComment} className="space-y-3 mb-6">
+              <CommentChordComposer
                 value={newComment}
                 onChange={setNewComment}
+                chords={newCommentChords}
+                onChordsChange={setNewCommentChords}
                 placeholder="Написать комментарий..."
-                className="flex-1"
                 disabled={submitting}
               />
-              <Button type="submit" disabled={submitting || !newComment.trim()} size="icon">
-                {submitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+              <div className="flex justify-end">
+                <Button type="submit" disabled={submitting || !newComment.trim()} className="gap-2">
+                  {submitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Отправить
+                </Button>
+              </div>
             </form>
           ) : (
             <div className="mb-6 p-4 rounded-lg bg-secondary/50 text-center text-muted-foreground">
@@ -329,7 +350,14 @@ export function SongViewer({ song, chords }: SongViewerProps) {
                           {format(new Date(comment.created_at), 'd MMM, HH:mm', { locale: ru })}
                         </span>
                       </div>
-                      <p className="text-sm"><CommentContent content={comment.content} /></p>
+                      <div className="text-sm">
+                        <CommentContent
+                          content={comment.content}
+                          chords={comment.chords}
+                          chordMap={commentChordMap}
+                          onChordClick={handleChordClick}
+                        />
+                      </div>
                       <div className="flex gap-2 mt-2">
                         {user && (
                           <button
@@ -355,22 +383,26 @@ export function SongViewer({ song, chords }: SongViewerProps) {
 
                   {/* Reply form */}
                   {replyingTo === comment.id && (
-                    <form onSubmit={submitReply} className="flex gap-2 ml-8">
-                      <CommentInput
+                    <form onSubmit={submitReply} className="space-y-2 ml-8">
+                      <CommentChordComposer
                         value={replyText}
                         onChange={setReplyText}
+                        chords={replyChords}
+                        onChordsChange={setReplyChords}
                         placeholder="Ответ..."
-                        className="flex-1"
                         disabled={submitting}
                         autoFocus
                       />
-                      <Button type="submit" size="sm" disabled={submitting || !replyText.trim()}>
-                        {submitting ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Send className="h-3 w-3" />
-                        )}
-                      </Button>
+                      <div className="flex justify-end">
+                        <Button type="submit" size="sm" disabled={submitting || !replyText.trim()} className="gap-2">
+                          {submitting ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
+                          Ответить
+                        </Button>
+                      </div>
                     </form>
                   )}
 
@@ -398,7 +430,14 @@ export function SongViewer({ song, chords }: SongViewerProps) {
                                 {format(new Date(reply.created_at), 'd MMM, HH:mm', { locale: ru })}
                               </span>
                             </div>
-                            <p className="text-sm"><CommentContent content={reply.content} /></p>
+                            <div className="text-sm">
+                              <CommentContent
+                                content={reply.content}
+                                chords={reply.chords}
+                                chordMap={commentChordMap}
+                                onChordClick={handleChordClick}
+                              />
+                            </div>
                             {(user?.id === reply.user_id || profile?.role === 'admin') && (
                               <button
                                 onClick={() => deleteComment(reply.id)}

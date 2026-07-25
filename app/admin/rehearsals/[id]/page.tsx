@@ -35,6 +35,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CommentInput } from '@/components/comments/comment-input'
 import { CommentContent } from '@/components/comments/comment-content'
+import { useChordMap } from '@/hooks/use-chord-map'
+import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Slider } from '@/components/ui/slider'
@@ -75,6 +77,7 @@ import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { Video as VideoType } from '@/lib/types'
 import type { MultitrackGroup } from '@/lib/types'
+import type { CommentChord } from '@/lib/types'
 import { MultitrackPlayer, MultitrackUploadDialog } from '@/components/multitrack'
 import { resolveAssetUrl, resolveAudioUrl } from '@/lib/storage-keys'
 import { adminRehearsalUrl, isUuid, rehearsalDateSlug } from '@/lib/rehearsal-url'
@@ -103,6 +106,7 @@ interface Comment {
   created_at: string
   user_id?: string
   parent_id?: string | null
+  chords?: CommentChord[] | null
   user: {
     display_name: string
   } | null
@@ -116,6 +120,7 @@ interface RehearsalComment {
   created_at: string
   user_id?: string
   parent_id: string | null
+  chords?: CommentChord[] | null
   user: {
     display_name: string
   } | null
@@ -168,6 +173,8 @@ export default function RehearsalDetailPage() {
   const autoplayAudioId = searchParams.get('audio')
   const autoplayTimestamp = searchParams.get('t')
 
+  const chordMap = useChordMap()
+  const { playArpeggio } = useGuitarAudio()
   const [rehearsal, setRehearsal] = useState<Rehearsal | null>(null)
   const [rehearsalId, setRehearsalId] = useState<string | null>(null)
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([])
@@ -1373,7 +1380,7 @@ export default function RehearsalDetailPage() {
                               </Button>
                             )}
                             <div className="flex-1">
-                              <p className="text-sm"><CommentContent content={comment.content} /></p>
+                              <div className="text-sm"><CommentContent content={comment.content} chords={comment.chords} chordMap={chordMap} onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])} /></div>
                               <p className="text-xs text-muted-foreground">
                                 <AdminUserHoverCard
                                   userId={comment.user_id || ''}
@@ -1461,7 +1468,7 @@ export default function RehearsalDetailPage() {
                               ) : (
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
-                                    <p className="text-sm"><CommentContent content={reply.content} /></p>
+                                    <div className="text-sm"><CommentContent content={reply.content} chords={reply.chords} chordMap={chordMap} onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])} /></div>
                                     <p className="text-xs text-muted-foreground mt-1">
                                       <AdminUserHoverCard
                                         userId={reply.user_id || ''}
@@ -1790,7 +1797,7 @@ export default function RehearsalDetailPage() {
                         <div className="flex gap-3 p-2 rounded-lg bg-secondary/50 group">
                           <div className="flex-1">
                             <p className="text-sm">
-                              <CommentContent content={comment.content} onTimestampClick={seekVideoToTime} />
+                              <CommentContent content={comment.content} chords={comment.chords} chordMap={chordMap} onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])} onTimestampClick={seekVideoToTime} />
                             </p>
                             <p className="text-xs text-muted-foreground">
                               <AdminUserHoverCard
@@ -1851,7 +1858,7 @@ export default function RehearsalDetailPage() {
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
                                     <p className="text-sm">
-                                      <CommentContent content={reply.content} onTimestampClick={seekVideoToTime} />
+                                      <CommentContent content={reply.content} chords={reply.chords} chordMap={chordMap} onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])} onTimestampClick={seekVideoToTime} />
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1">
                                       <AdminUserHoverCard
@@ -2010,7 +2017,7 @@ export default function RehearsalDetailPage() {
                           // View mode
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
-                              <p className="text-sm"><CommentContent content={comment.content} /></p>
+                              <div className="text-sm"><CommentContent content={comment.content} chords={comment.chords} chordMap={chordMap} onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])} /></div>
                               <p className="text-xs text-muted-foreground mt-1">
                                 <AdminUserHoverCard
                                   userId={comment.user_id || ''}
@@ -2100,7 +2107,7 @@ export default function RehearsalDetailPage() {
                                 // View mode for reply
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
-                                    <p className="text-sm"><CommentContent content={reply.content} /></p>
+                                    <div className="text-sm"><CommentContent content={reply.content} chords={reply.chords} chordMap={chordMap} onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])} /></div>
                                     <p className="text-xs text-muted-foreground mt-1">
                                       <AdminUserHoverCard
                                         userId={reply.user_id || ''}

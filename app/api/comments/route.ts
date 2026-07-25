@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { buildCommentThreads, type CommentRow } from '@/lib/comment-threads'
 import { sendCommentMentionNotifications } from '@/lib/comment-notifications'
+import { commentTypeSupportsChords, sanitizeCommentChords } from '@/lib/text-chords'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
   }
 
   const rows = await db.queryMany<CommentRow>(
-    `SELECT c.id, c.object_id, c.content, c.timestamp_seconds, c.created_at,
+    `SELECT c.id, c.object_id, c.content, c.timestamp_seconds, c.chords, c.created_at,
        c.user_id, c.parent_id, p.display_name, p.username, p.role
      FROM comments c
      LEFT JOIN profiles p ON p.id = c.user_id
@@ -34,17 +35,20 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { type, object_id, content, parent_id, timestamp_seconds } = body
+  const { type, object_id, content, parent_id, timestamp_seconds, chords } = body
 
   if (!type || !content?.trim()) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
   const trimmedContent = content.trim()
+  const chordsPayload = commentTypeSupportsChords(type)
+    ? sanitizeCommentChords(chords, trimmedContent.length)
+    : null
 
   const created = await db.queryOne<{ id: string }>(
-    `INSERT INTO comments (type, object_id, user_id, content, parent_id, timestamp_seconds)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO comments (type, object_id, user_id, content, parent_id, timestamp_seconds, chords)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id`,
     [
       type,
@@ -53,6 +57,7 @@ export async function POST(request: Request) {
       trimmedContent,
       parent_id ?? null,
       timestamp_seconds ?? null,
+      chordsPayload ? JSON.stringify(chordsPayload) : null,
     ]
   )
 

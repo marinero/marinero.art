@@ -26,7 +26,9 @@ import Link from 'next/link'
 import { MultitrackPlayer } from '@/components/multitrack'
 import { resolveAudioUrl } from '@/lib/storage-keys'
 import { adminRehearsalUrl } from '@/lib/rehearsal-url'
-import type { AudioFile, Video, MultitrackGroup } from '@/lib/types'
+import { useChordMap } from '@/hooks/use-chord-map'
+import { useGuitarAudio } from '@/hooks/use-guitar-audio'
+import type { AudioFile, Video, MultitrackGroup, CommentChord } from '@/lib/types'
 
 export interface RehearsalTake {
   rehearsal_id: string
@@ -42,6 +44,7 @@ interface ApiComment {
   user_id: string
   parent_id: string | null
   timestamp_seconds?: number | null
+  chords?: CommentChord[] | null
   user: { display_name: string } | null
   replies: ApiComment[]
 }
@@ -698,6 +701,8 @@ function CommentList({
   onTimestampClick?: (seconds: number) => void
   onContentTimestampClick?: (seconds: number) => void
 }) {
+  const chordMap = useChordMap()
+  const { playArpeggio } = useGuitarAudio()
   const canDelete = (authorId: string) => isAdmin || authorId === currentUserId
   if (comments.length === 0) return null
 
@@ -721,12 +726,15 @@ function CommentList({
               </Button>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm break-words">
+              <div className="text-sm break-words">
                 <CommentContent
                   content={comment.content}
+                  chords={comment.chords}
+                  chordMap={chordMap}
+                  onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])}
                   onTimestampClick={onContentTimestampClick}
                 />
-              </p>
+              </div>
               <p className="text-xs text-muted-foreground">
                 <span>{comment.user?.display_name || 'Пользователь'}</span>
                 {' · '}
@@ -780,12 +788,15 @@ function CommentList({
               {comment.replies.map((reply) => (
                 <div key={reply.id} className="flex gap-2 p-2 rounded-lg bg-secondary/30">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm break-words">
+                    <div className="text-sm break-words">
                       <CommentContent
                         content={reply.content}
+                        chords={reply.chords}
+                        chordMap={chordMap}
+                        onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])}
                         onTimestampClick={onContentTimestampClick}
                       />
-                    </p>
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       <span>{reply.user?.display_name || 'Пользователь'}</span>
                       {' · '}

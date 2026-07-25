@@ -34,6 +34,12 @@ export interface Photo {
   comment_count?: number
 }
 
+/** A chord placed over comment/song text at a character position. */
+export interface CommentChord {
+  chord_id: string
+  position: number
+}
+
 export interface Comment {
   id: string
   type: 'audio' | 'photo' | 'rehearsal' | 'event' | 'song' | 'video'
@@ -43,6 +49,7 @@ export interface Comment {
   created_at: string
   parent_id?: string | null
   timestamp_seconds?: number | null
+  chords?: CommentChord[] | null
   profile?: Profile
 }
 
@@ -219,6 +226,7 @@ export interface MultitrackComment {
   parent_id: string | null
   created_at: string
   updated_at: string
+  chords?: CommentChord[] | null
   profile?: Profile
 }
 

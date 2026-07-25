@@ -1,4 +1,5 @@
 import type { ThreadedComment } from '@/lib/comment-threads'
+import type { CommentChord } from '@/lib/types'
 
 export type NormalizedComment = {
   id: string
@@ -8,6 +9,7 @@ export type NormalizedComment = {
   parent_id: string | null
   timestamp_seconds?: number | null
   object_id?: string | null
+  chords?: CommentChord[] | null
   profiles: {
     display_name: string | null
     username: string | null
@@ -37,6 +39,7 @@ function normalizeComment(comment: ThreadedComment): NormalizedComment {
     parent_id: comment.parent_id,
     timestamp_seconds: comment.timestamp_seconds,
     object_id: comment.object_id,
+    chords: comment.chords ?? null,
     profiles: {
       display_name: comment.user?.display_name ?? comment.display_name ?? null,
       username: comment.user?.username ?? null,

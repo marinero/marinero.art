@@ -46,13 +46,16 @@ import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
 import { CommentInput } from '@/components/comments/comment-input'
 import { CommentContent } from '@/components/comments/comment-content'
+import { CommentChordComposer } from '@/components/comments/comment-chord-composer'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, MessageCircle, Send, Trash2, Loader2, Reply, Pencil, Check, Video as VideoIcon, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import type { Video, Comment, Profile } from '@/lib/types'
+import type { Video, Comment, CommentChord, Chord, Profile } from '@/lib/types'
 import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
 import { fetchNormalizedComments, buildCommentTree } from '@/lib/comments-client'
+import { buildChordMap } from '@/lib/text-chords'
+import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 
 type CommentWithProfile = Comment & { 
   profiles: Pick<Profile, 'display_name' | 'username' | 'role'>
@@ -133,11 +136,15 @@ export default function VideoPage() {
   const [comments, setComments] = useState<CommentWithProfile[]>([])
   const [loadingComments, setLoadingComments] = useState(false)
   const [newComment, setNewComment] = useState('')
+  const [newCommentChords, setNewCommentChords] = useState<CommentChord[]>([])
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
+  const [replyChords, setReplyChords] = useState<CommentChord[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [commentChordMap, setCommentChordMap] = useState<Map<string, Chord>>(new Map())
+  const { playArpeggio } = useGuitarAudio()
   
   // Edit state
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
@@ -182,6 +189,13 @@ export default function VideoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoSlug])
 
+  useEffect(() => {
+    fetch('/api/chords')
+      .then((res) => (res.ok ? res.json() : { chords: [] }))
+      .then((data) => setCommentChordMap(buildChordMap((data.chords ?? []) as Chord[])))
+      .catch(() => {})
+  }, [])
+
   const fetchComments = useCallback(async (videoId: string) => {
     setLoadingComments(true)
     const normalized = await fetchNormalizedComments('video', videoId)
@@ -194,6 +208,7 @@ export default function VideoPage() {
       type: 'video',
       object_id: c.object_id ?? videoId,
       timestamp_seconds: c.timestamp_seconds ?? null,
+      chords: c.chords ?? null,
       profiles: c.profiles,
       replies: [],
     }))
@@ -394,11 +409,13 @@ export default function VideoPage() {
         object_id: video.id,
         content: newComment.trim(),
         parent_id: null,
+        chords: newCommentChords,
       }),
     })
 
     if (res.ok) {
       setNewComment('')
+      setNewCommentChords([])
       fetchComments(video.id)
     }
 
@@ -420,6 +437,7 @@ export default function VideoPage() {
         object_id: video.id,
         content: replyContentForEmail,
         parent_id: replyingTo,
+        chords: replyChords,
       }),
     })
 
@@ -440,6 +458,7 @@ export default function VideoPage() {
       }
 
       setReplyText('')
+      setReplyChords([])
       setReplyingTo(null)
       fetchComments(video.id)
     }
@@ -607,20 +626,24 @@ export default function VideoPage() {
                           </span>
                         </div>
                       )}
-                      <form onSubmit={handleSubmitComment} className="flex gap-2">
-                        <CommentInput
+                      <form onSubmit={handleSubmitComment} className="space-y-2">
+                        <CommentChordComposer
                           value={newComment}
                           onChange={setNewComment}
+                          chords={newCommentChords}
+                          onChordsChange={setNewCommentChords}
                           placeholder="Написать комментарий..."
-                          className="flex-1"
                         />
-                        <Button type="submit" disabled={submitting || !newComment.trim()}>
-                          {submitting ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Send className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <div className="flex justify-end">
+                          <Button type="submit" disabled={submitting || !newComment.trim()} className="gap-2">
+                            {submitting ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                            Отправить
+                          </Button>
+                        </div>
                       </form>
                       <p className="text-xs text-muted-foreground">
                         Метки времени (например, 00:01:23) станут кликабельными ссылками на момент видео
@@ -717,9 +740,15 @@ export default function VideoPage() {
                                   )}
                                 </div>
                               </div>
-                              <p className="text-sm mt-2">
-                                <CommentContent content={comment.content} onTimestampClick={seekToTime} />
-                              </p>
+                              <div className="text-sm mt-2">
+                                <CommentContent
+                                  content={comment.content}
+                                  chords={comment.chords}
+                                  chordMap={commentChordMap}
+                                  onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])}
+                                  onTimestampClick={seekToTime}
+                                />
+                              </div>
                               {user && (
                                 <button
                                   onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
@@ -735,18 +764,22 @@ export default function VideoPage() {
 
                         {/* Reply form */}
                         {replyingTo === comment.id && (
-                          <form onSubmit={handleSubmitReply} className="flex gap-2 ml-6">
-                            <CommentInput
+                          <form onSubmit={handleSubmitReply} className="space-y-2 ml-6">
+                            <CommentChordComposer
                               value={replyText}
                               onChange={setReplyText}
+                              chords={replyChords}
+                              onChordsChange={setReplyChords}
                               placeholder="Ответ..."
-                              className="flex-1 h-9 text-sm"
                               disabled={submitting}
                               autoFocus
                             />
-                            <Button type="submit" size="sm" disabled={submitting || !replyText.trim()}>
-                              <Send className="h-3 w-3" />
-                            </Button>
+                            <div className="flex justify-end">
+                              <Button type="submit" size="sm" disabled={submitting || !replyText.trim()} className="gap-2">
+                                <Send className="h-3 w-3" />
+                                Ответить
+                              </Button>
+                            </div>
                           </form>
                         )}
 
@@ -819,9 +852,15 @@ export default function VideoPage() {
                                         )}
                                       </div>
                                     </div>
-                                    <p className="text-xs mt-1">
-                                      <CommentContent content={reply.content} onTimestampClick={seekToTime} />
-                                    </p>
+                                    <div className="text-xs mt-1">
+                                      <CommentContent
+                                        content={reply.content}
+                                        chords={reply.chords}
+                                        chordMap={commentChordMap}
+                                        onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])}
+                                        onTimestampClick={seekToTime}
+                                      />
+                                    </div>
                                   </>
                                 )}
                               </div>

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { commentTypeSupportsChords, sanitizeCommentChords } from '@/lib/text-chords'
 
 async function checkCommentPermission(commentId: string, userId: string) {
-  const comment = await db.queryOne<{ user_id: string }>(
-    'SELECT user_id FROM comments WHERE id = $1',
+  const comment = await db.queryOne<{ user_id: string; type: string; content: string }>(
+    'SELECT user_id, type, content FROM comments WHERE id = $1',
     [commentId]
   )
 
@@ -39,7 +40,7 @@ export async function PATCH(
   if ('error' in permission) return permission.error
 
   const body = await request.json()
-  const { content, timestamp_seconds } = body
+  const { content, timestamp_seconds, chords } = body
 
   const updateData: { content?: string; timestamp_seconds?: number | null } = {}
 
@@ -51,17 +52,32 @@ export async function PATCH(
     updateData.timestamp_seconds = timestamp_seconds
   }
 
-  if (Object.keys(updateData).length === 0) {
+  // Chords are re-evaluated against the effective (new or existing) content.
+  let chordsUpdate: { value: string | null } | null = null
+  if (chords !== undefined && commentTypeSupportsChords(permission.comment.type)) {
+    const effectiveContent = updateData.content ?? permission.comment.content
+    const sanitized = sanitizeCommentChords(chords, effectiveContent.length)
+    chordsUpdate = { value: sanitized ? JSON.stringify(sanitized) : null }
+  }
+
+  if (Object.keys(updateData).length === 0 && !chordsUpdate) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
   }
 
   const updated = await db.queryOne(
     `UPDATE comments SET
        content = COALESCE($2, content),
-       timestamp_seconds = COALESCE($3, timestamp_seconds)
+       timestamp_seconds = COALESCE($3, timestamp_seconds),
+       chords = CASE WHEN $4 THEN $5::jsonb ELSE chords END
      WHERE id = $1
      RETURNING *`,
-    [id, updateData.content ?? null, updateData.timestamp_seconds ?? null]
+    [
+      id,
+      updateData.content ?? null,
+      updateData.timestamp_seconds ?? null,
+      chordsUpdate !== null,
+      chordsUpdate?.value ?? null,
+    ]
   )
 
   if (!updated) {

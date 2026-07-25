@@ -1,3 +1,5 @@
+import type { CommentChord } from '@/lib/types'
+
 export type CommentRow = {
   id: string
   content: string
@@ -6,6 +8,7 @@ export type CommentRow = {
   parent_id: string | null
   timestamp_seconds?: number | null
   object_id?: string | null
+  chords?: CommentChord[] | null
   display_name: string | null
   username?: string | null
   role?: string | null

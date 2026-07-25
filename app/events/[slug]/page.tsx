@@ -9,8 +9,10 @@ import { resolveAssetUrl } from '@/lib/storage-keys'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
-import { CommentInput } from '@/components/comments/comment-input'
 import { CommentContent } from '@/components/comments/comment-content'
+import { CommentChordComposer } from '@/components/comments/comment-chord-composer'
+import { useChordMap } from '@/hooks/use-chord-map'
+import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import {
   ArrowLeft,
   Calendar,
@@ -32,7 +34,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import type { Event, Profile, Album, Video as VideoType } from '@/lib/types'
+import type { Event, Profile, Album, Video as VideoType, CommentChord } from '@/lib/types'
 import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
 
 // Extract video ID from various platform URLs
@@ -77,6 +79,7 @@ interface EventComment {
   user_name: string
   user_role: string
   parent_id: string | null
+  chords: CommentChord[] | null
   replies: EventComment[]
 }
 
@@ -91,11 +94,15 @@ export default function EventPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [comments, setComments] = useState<EventComment[]>([])
   const [newComment, setNewComment] = useState('')
+  const [newCommentChords, setNewCommentChords] = useState<CommentChord[]>([])
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
+  const [replyChords, setReplyChords] = useState<CommentChord[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [albums, setAlbums] = useState<Album[]>([])
   const [videos, setVideos] = useState<VideoType[]>([])
+  const commentChordMap = useChordMap()
+  const { playArpeggio } = useGuitarAudio()
 
   useEffect(() => {
     async function fetchData() {
@@ -132,6 +139,7 @@ export default function EventPage() {
       parent_id: c.parent_id,
       user_name: c.profiles.display_name || c.profiles.username || 'Пользователь',
       user_role: c.profiles.role,
+      chords: c.chords ?? null,
       replies: [],
     }))
 
@@ -151,11 +159,13 @@ export default function EventPage() {
         object_id: event.id,
         content: newComment.trim(),
         parent_id: null,
+        chords: newCommentChords,
       }),
     })
 
     if (res.ok) {
       setNewComment('')
+      setNewCommentChords([])
       fetchComments(event.id)
     }
     setSubmitting(false)
@@ -176,6 +186,7 @@ export default function EventPage() {
         object_id: event.id,
         content: replyContentForEmail,
         parent_id: replyingTo,
+        chords: replyChords,
       }),
     })
 
@@ -198,6 +209,7 @@ export default function EventPage() {
       }
 
       setReplyText('')
+      setReplyChords([])
       setReplyingTo(null)
       fetchComments(event.id)
     }
@@ -511,21 +523,25 @@ export default function EventPage() {
 
                 {/* Comment form */}
                 {user ? (
-                  <form onSubmit={submitComment} className="flex gap-3 mb-6">
-                    <CommentInput
+                  <form onSubmit={submitComment} className="space-y-2 mb-6">
+                    <CommentChordComposer
                       value={newComment}
                       onChange={setNewComment}
+                      chords={newCommentChords}
+                      onChordsChange={setNewCommentChords}
                       placeholder="Написать комментарий..."
-                      className="flex-1"
                       disabled={submitting}
                     />
-                    <Button type="submit" disabled={submitting || !newComment.trim()} size="icon">
-                      {submitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={submitting || !newComment.trim()} className="gap-2">
+                        {submitting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                        Отправить
+                      </Button>
+                    </div>
                   </form>
                 ) : (
                   <div className="mb-6 p-4 rounded-lg bg-secondary/50 text-center text-muted-foreground">
@@ -568,7 +584,14 @@ export default function EventPage() {
                                 {format(new Date(comment.created_at), 'd MMM, HH:mm', { locale: ru })}
                               </span>
                             </div>
-                            <p className="text-sm text-foreground/90"><CommentContent content={comment.content} /></p>
+                            <div className="text-sm text-foreground/90">
+                              <CommentContent
+                                content={comment.content}
+                                chords={comment.chords}
+                                chordMap={commentChordMap}
+                                onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])}
+                              />
+                            </div>
                             {/* Reply button */}
                             {user && (
                               <button
@@ -592,31 +615,35 @@ export default function EventPage() {
 
                         {/* Inline reply form */}
                         {replyingTo === comment.id && (
-                          <form onSubmit={submitReply} className="flex gap-2 ml-8">
-                            <CommentInput
+                          <form onSubmit={submitReply} className="space-y-2 ml-8">
+                            <CommentChordComposer
                               value={replyText}
                               onChange={setReplyText}
+                              chords={replyChords}
+                              onChordsChange={setReplyChords}
                               placeholder="Написать ответ..."
-                              className="flex-1 h-9 text-sm"
                               disabled={submitting}
                               autoFocus
                             />
-                            <Button type="submit" disabled={submitting || !replyText.trim()} size="sm" className="h-9">
-                              {submitting ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Send className="h-3 w-3" />
-                              )}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-9 text-xs"
-                              onClick={() => { setReplyingTo(null); setReplyText('') }}
-                            >
-                              Отмена
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs"
+                                onClick={() => { setReplyingTo(null); setReplyText(''); setReplyChords([]) }}
+                              >
+                                Отмена
+                              </Button>
+                              <Button type="submit" disabled={submitting || !replyText.trim()} size="sm" className="gap-2">
+                                {submitting ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Send className="h-3 w-3" />
+                                )}
+                                Ответить
+                              </Button>
+                            </div>
                           </form>
                         )}
 
@@ -646,7 +673,14 @@ export default function EventPage() {
                                       {format(new Date(reply.created_at), 'd MMM, HH:mm', { locale: ru })}
                                     </span>
                                   </div>
-                                  <p className="text-sm text-foreground/90"><CommentContent content={reply.content} /></p>
+                                  <div className="text-sm text-foreground/90">
+                                    <CommentContent
+                                      content={reply.content}
+                                      chords={reply.chords}
+                                      chordMap={commentChordMap}
+                                      onChordClick={(chord) => playArpeggio(chord.fret_positions as number[])}
+                                    />
+                                  </div>
                                 </div>
                                 {(user?.id === reply.user_id || isAdmin) && (
                                   <button

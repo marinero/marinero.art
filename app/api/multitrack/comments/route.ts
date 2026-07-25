@@ -2,6 +2,21 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendCommentMentionNotifications } from '@/lib/comment-notifications'
+import { sanitizeCommentChords } from '@/lib/text-chords'
+import type { CommentChord } from '@/lib/types'
+
+type MultitrackCommentRow = {
+  id: string
+  user_id: string
+  content: string
+  multitrack_group_id: string
+  timestamp_seconds: number | null
+  solo_track_id: string | null
+  parent_id: string | null
+  chords: CommentChord[] | null
+  created_at: string
+  updated_at: string
+}
 
 async function attachProfiles<T extends { user_id: string }>(comments: T[]) {
   if (comments.length === 0) return []
@@ -32,7 +47,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'group_id is required' }, { status: 400 })
   }
 
-  const comments = await db.queryMany<{ id: string; user_id: string; content: string; multitrack_group_id: string; timestamp_seconds: number | null; solo_track_id: string | null; parent_id: string | null; created_at: string; updated_at: string }>(
+  const comments = await db.queryMany<MultitrackCommentRow>(
     `SELECT * FROM multitrack_comments
      WHERE multitrack_group_id = $1
      ORDER BY created_at ASC`,
@@ -49,7 +64,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { multitrack_group_id, content, timestamp_seconds, solo_track_id, parent_id } = body
+  const { multitrack_group_id, content, timestamp_seconds, solo_track_id, parent_id, chords } = body
 
   if (!multitrack_group_id || !content) {
     return NextResponse.json(
@@ -58,10 +73,12 @@ export async function POST(request: Request) {
     )
   }
 
-  const comment = await db.queryOne<{ id: string; user_id: string; content: string; multitrack_group_id: string; timestamp_seconds: number | null; solo_track_id: string | null; parent_id: string | null; created_at: string; updated_at: string }>(
+  const chordsPayload = sanitizeCommentChords(chords, String(content).length)
+
+  const comment = await db.queryOne<MultitrackCommentRow>(
     `INSERT INTO multitrack_comments (
-       multitrack_group_id, user_id, content, timestamp_seconds, solo_track_id, parent_id
-     ) VALUES ($1, $2, $3, $4, $5, $6)
+       multitrack_group_id, user_id, content, timestamp_seconds, solo_track_id, parent_id, chords
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
     [
       multitrack_group_id,
@@ -70,6 +87,7 @@ export async function POST(request: Request) {
       timestamp_seconds ?? null,
       solo_track_id ?? null,
       parent_id ?? null,
+      chordsPayload ? JSON.stringify(chordsPayload) : null,
     ]
   )
 
@@ -132,7 +150,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json()
-  const { id, content } = body
+  const { id, content, chords } = body
 
   if (!id || !content) {
     return NextResponse.json({ error: 'id and content are required' }, { status: 400 })
@@ -151,12 +169,14 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const updated = await db.queryOne<{ id: string; user_id: string; content: string; multitrack_group_id: string; timestamp_seconds: number | null; solo_track_id: string | null; parent_id: string | null; created_at: string; updated_at: string }>(
+  const chordsPayload = sanitizeCommentChords(chords, String(content).length)
+
+  const updated = await db.queryOne<MultitrackCommentRow>(
     `UPDATE multitrack_comments
-     SET content = $2, updated_at = now()
+     SET content = $2, chords = $3::jsonb, updated_at = now()
      WHERE id = $1
      RETURNING *`,
-    [id, content]
+    [id, content, chordsPayload ? JSON.stringify(chordsPayload) : null]
   )
 
   if (!updated) {
