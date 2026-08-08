@@ -75,14 +75,15 @@ import {
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
-import { upload } from '@/lib/upload-client'
+import { uploadFileInChunks } from '@/lib/upload-client'
 import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { Video as VideoType } from '@/lib/types'
 import type { MultitrackGroup } from '@/lib/types'
 import type { CommentChord } from '@/lib/types'
 import { MultitrackPlayer, MultitrackUploadDialog } from '@/components/multitrack'
-import { resolveAssetUrl, resolveAudioUrl } from '@/lib/storage-keys'
+import { resolveAssetUrl, resolveAudioUrl, audioStreamUrl } from '@/lib/storage-keys'
+import { Progress } from '@/components/ui/progress'
 import { adminRehearsalUrl, isUuid, rehearsalDateSlug } from '@/lib/rehearsal-url'
 
 interface AudioFile {
@@ -185,6 +186,9 @@ export default function RehearsalDetailPage() {
   const [audioComments, setAudioComments] = useState<Record<string, Comment[]>>({})
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadQueue, setUploadQueue] = useState<
+    { name: string; progress: number; status: 'pending' | 'uploading' | 'done' | 'error'; error?: string }[]
+  >([])
   const [newComment, setNewComment] = useState('')
   const [newCommentChords, setNewCommentChords] = useState<CommentChord[]>([])
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
@@ -653,56 +657,102 @@ export default function RehearsalDetailPage() {
   }
 
   async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const selected = Array.from(e.target.files || [])
+    // Позволяем выбрать те же файлы повторно
+    e.target.value = ''
+    if (selected.length === 0) return
 
-    if (!file.type.startsWith('audio/')) {
-      alert('Пожалуйста, выберите аудиофайл')
+    if (!rehearsalId) {
+      alert('Rehearsal ID not found')
       return
     }
 
-    if (file.size > 100 * 1024 * 1024) {
-      alert('Файл слишком большой (максимум 100MB)')
+    const isAudio = (f: File) =>
+      f.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac|aac)$/i.test(f.name)
+
+    const audioSelected = selected.filter(isAudio)
+    const valid = audioSelected.filter(f => f.size <= 100 * 1024 * 1024)
+
+    const skippedNotAudio = selected.length - audioSelected.length
+    const skippedTooBig = audioSelected.length - valid.length
+
+    if (valid.length === 0) {
+      alert('Не выбрано ни одного подходящего аудиофайла (аудио до 100MB)')
       return
     }
 
     setUploading(true)
-    try {
-      // Get duration from local file before upload
-      const durationSeconds = await getAudioDuration(file)
+    setUploadQueue(valid.map(f => ({ name: f.name, progress: 0, status: 'pending' as const })))
 
-      // Use client-side upload for large files (bypasses 4.5MB serverless limit)
-      const timestamp = Date.now()
-      const extension = file.name.split('.').pop()
-      const pathname = `marinero/audio/${timestamp}-${Math.random().toString(36).substring(7)}.${extension}`
-      
-      const blob = await upload(pathname, file, {
-        access: 'private',
-      })
+    let successCount = 0
 
-      const fileUrl = blob.url
-      
-      // Save to database
-      if (!rehearsalId) throw new Error('Rehearsal ID not found')
-      
-      const saveResponse = await fetch(`/api/admin/rehearsals/${rehearsalId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          file_url: fileUrl,
-          filename: file.name,
-          duration_seconds: durationSeconds,
-        }),
-      })
+    for (let i = 0; i < valid.length; i++) {
+      const file = valid[i]
+      setUploadQueue(prev =>
+        prev.map((item, idx) => (idx === i ? { ...item, status: 'uploading' } : item))
+      )
 
-      if (!saveResponse.ok) throw new Error('Failed to save audio metadata')
+      try {
+        // Длительность вычисляем локально до загрузки
+        const durationSeconds = await getAudioDuration(file)
 
-      loadRehearsal()
-    } catch (error: any) {
-      console.error('Upload error:', error)
-      alert(`Ошибка загрузки аудио: ${error?.message || 'Unknown error'}`)
-    } finally {
-      setUploading(false)
+        // Чанк-загрузка: обходит таймауты прокси и лимиты размера тела запроса
+        const timestamp = Date.now()
+        const extension = file.name.split('.').pop()
+        const pathname = `marinero/audio/${timestamp}-${Math.random().toString(36).substring(7)}.${extension}`
+
+        const { pathname: key } = await uploadFileInChunks(pathname, file, percent => {
+          setUploadQueue(prev =>
+            prev.map((item, idx) => (idx === i ? { ...item, progress: percent } : item))
+          )
+        })
+
+        const fileUrl = audioStreamUrl(key)
+
+        const saveResponse = await fetch(`/api/admin/rehearsals/${rehearsalId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file_url: fileUrl,
+            filename: file.name,
+            duration_seconds: durationSeconds,
+          }),
+        })
+
+        if (!saveResponse.ok) throw new Error('Failed to save audio metadata')
+
+        successCount++
+        setUploadQueue(prev =>
+          prev.map((item, idx) =>
+            idx === i ? { ...item, status: 'done', progress: 100 } : item
+          )
+        )
+      } catch (error: any) {
+        const message = error?.message || 'Unknown error'
+        console.error(`Upload error for ${file.name}:`, error)
+        setUploadQueue(prev =>
+          prev.map((item, idx) =>
+            idx === i ? { ...item, status: 'error', error: message } : item
+          )
+        )
+      }
+    }
+
+    if (successCount > 0) await loadRehearsal()
+
+    setUploading(false)
+
+    const hasErrors = valid.length !== successCount
+    if (!hasErrors && skippedNotAudio === 0 && skippedTooBig === 0) {
+      // Всё успешно — прячем список через пару секунд
+      setTimeout(() => setUploadQueue([]), 2000)
+    }
+
+    const notes: string[] = []
+    if (skippedNotAudio > 0) notes.push(`пропущено не-аудио: ${skippedNotAudio}`)
+    if (skippedTooBig > 0) notes.push(`пропущено больше 100MB: ${skippedTooBig}`)
+    if (notes.length > 0) {
+      alert(`Готово. ${notes.join(', ')}.`)
     }
   }
 
@@ -1585,8 +1635,8 @@ export default function RehearsalDetailPage() {
                   ) : (
                     <>
                       <Upload className="h-6 w-6 text-muted-foreground mb-1" />
-                      <p className="text-sm text-muted-foreground">Загрузить аудиофайл</p>
-                      <p className="text-xs text-muted-foreground/70">MP3, WAV до 100MB</p>
+                      <p className="text-sm text-muted-foreground">Загрузить аудиофайлы</p>
+                      <p className="text-xs text-muted-foreground/70">Можно выбрать несколько · MP3, WAV до 100MB</p>
                     </>
                   )}
                 </div>
@@ -1594,10 +1644,41 @@ export default function RehearsalDetailPage() {
                   type="file"
                   className="hidden"
                   accept="audio/*"
+                  multiple
                   onChange={handleAudioUpload}
                   disabled={uploading}
                 />
               </label>
+
+              {uploadQueue.length > 0 && (
+                <div className="space-y-2">
+                  {uploadQueue.map((item, index) => (
+                    <div key={index} className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg">
+                      <Music className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm truncate">{item.name}</p>
+                          {item.status === 'uploading' && (
+                            <span className="text-xs text-muted-foreground shrink-0">{item.progress}%</span>
+                          )}
+                          {item.status === 'done' && (
+                            <span className="text-xs text-green-600 shrink-0">Загружен</span>
+                          )}
+                          {item.status === 'pending' && (
+                            <span className="text-xs text-muted-foreground shrink-0">В очереди</span>
+                          )}
+                          {item.status === 'error' && (
+                            <span className="text-xs text-destructive shrink-0 truncate">Ошибка: {item.error}</span>
+                          )}
+                        </div>
+                        {(item.status === 'uploading' || item.status === 'pending') && (
+                          <Progress value={item.progress} className="h-1 mt-1" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Audio List */}
               {audioFiles.length === 0 ? (
