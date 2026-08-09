@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { AdminSidebar } from '@/components/admin/sidebar'
 import { EnvironmentIndicator } from '@/components/admin/environment-indicator'
+import { AccessDenied } from '@/components/layout/access-denied'
 import { getSystemInfo } from '@/lib/system-info'
 import { pageMetadata } from '@/lib/metadata'
 
@@ -28,7 +29,12 @@ export default async function AdminLayout({
   )
 
   if (profile?.role !== 'admin') {
-    redirect('/')
+    return (
+      <AccessDenied
+        user={{ id: session.user.id, email: session.user.email ?? undefined }}
+        displayName={profile?.display_name ?? session.user.name ?? null}
+      />
+    )
   }
 
   const systemInfo = await getSystemInfo()
