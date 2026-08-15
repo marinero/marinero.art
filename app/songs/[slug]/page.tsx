@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { SongViewer } from './song-viewer'
 import { SongRehearsals, type RehearsalTake } from './song-rehearsals'
+import { RestrictedNotice } from '@/components/layout/restricted-notice'
 import type {
   Chord,
   SongText,
@@ -25,8 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params
 
   const song = await db.queryOne<{ title: string }>(
-    `SELECT title FROM song_texts
-     WHERE slug = $1 AND is_published = true`,
+    `SELECT title FROM song_texts WHERE slug = $1`,
     [slug]
   )
 
@@ -51,6 +51,38 @@ export default async function SongPage({ params }: PageProps) {
   )
 
   if (!song) {
+    // Distinguish "doesn't exist" (real 404) from "exists but not visible yet"
+    // (unpublished draft). Non-admins should get a friendly notice, not a 404.
+    if (!isAdmin) {
+      const existing = await db.queryOne<{ title: string }>(
+        `SELECT title FROM song_texts WHERE slug = $1`,
+        [slug]
+      )
+
+      if (existing) {
+        if (!user) {
+          return (
+            <RestrictedNotice
+              user={user}
+              displayName={displayName}
+              title="Нужно войти"
+              message={`Песня «${existing.title}» доступна после входа в аккаунт. Войдите, чтобы посмотреть её.`}
+              login={{ redirectTo: `/songs/${slug}` }}
+            />
+          )
+        }
+
+        return (
+          <RestrictedNotice
+            user={user}
+            displayName={displayName}
+            title="Песня пока не опубликована"
+            message={`Песня «${existing.title}» ещё в подготовке и доступна только администраторам.`}
+          />
+        )
+      }
+    }
+
     notFound()
   }
 
