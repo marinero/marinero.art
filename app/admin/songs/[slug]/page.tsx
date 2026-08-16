@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { ChordDiagram } from '@/components/songs/chord-diagram'
 import { ChordLibrary, type ChordLibraryRef } from '@/components/songs/chord-library'
 import { ChordEditor } from '@/components/songs/chord-editor'
+import { SongDocumentsManager } from './song-documents-manager'
 import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { ArrowLeft, Save, Eye, Music, Trash2, Volume2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -263,6 +264,9 @@ export default function SongEditorPage() {
               />
             </CardContent>
           </Card>
+
+          {/* Documents: sheet music & tabs */}
+          <SongDocumentsManager songId={song.id} />
         </div>
 
         {/* Right Column - Chord Editor & Library (2/3) */}

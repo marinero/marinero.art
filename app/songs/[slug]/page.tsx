@@ -5,11 +5,13 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { SongViewer } from './song-viewer'
 import { SongRehearsals, type RehearsalTake } from './song-rehearsals'
+import { SongDocuments } from './song-documents'
 import { RestrictedNotice } from '@/components/layout/restricted-notice'
 import type {
   Chord,
   SongText,
   SongTextChord,
+  SongDocument,
   AudioFile,
   Video,
   MultitrackGroup,
@@ -136,6 +138,13 @@ export default async function SongPage({ params }: PageProps) {
 
   const showMedia = isAdmin || songVideos.length > 0
 
+  const documents = await db.queryMany<SongDocument>(
+    `SELECT * FROM song_documents
+     WHERE song_text_id = $1 ${isAdmin ? '' : 'AND is_published = true'}
+     ORDER BY order_index ASC, created_at ASC`,
+    [song.id]
+  )
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header user={user} isAdmin={isAdmin} displayName={displayName} />
@@ -144,6 +153,11 @@ export default async function SongPage({ params }: PageProps) {
           song={song} 
           chords={chords} 
         />
+        {documents.length > 0 && (
+          <div className="max-w-4xl mx-auto mt-6">
+            <SongDocuments documents={documents} isAdmin={isAdmin} />
+          </div>
+        )}
         {showMedia && (
           <div className="max-w-4xl mx-auto mt-6">
             <SongRehearsals

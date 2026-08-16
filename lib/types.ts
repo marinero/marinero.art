@@ -119,6 +119,24 @@ export interface SongTextChord {
   chord?: Chord
 }
 
+// Documents attached to a song (sheet music, tabs, other files)
+export type SongDocumentKind = 'sheet' | 'tab' | 'other'
+
+export interface SongDocument {
+  id: string
+  song_text_id: string
+  title: string
+  kind: SongDocumentKind
+  file_url: string
+  filename: string
+  content_type: string | null
+  size_bytes: number | null
+  is_published: boolean
+  order_index: number
+  created_at: string
+  updated_at: string
+}
+
 // Guitar fretboard types
 export type GuitarString = 1 | 2 | 3 | 4 | 5 | 6
 export type Fret = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14

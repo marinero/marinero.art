@@ -57,6 +57,7 @@ export function resolveBucket(key: string): 'public' | 'private' {
   if (normalized.startsWith('marinero/gallery/')) return 'public'
   if (normalized.startsWith('marinero/about/')) return 'public'
   if (normalized.startsWith('marinero/audio/')) return 'private'
+  if (normalized.startsWith('marinero/documents/')) return 'private'
   if (normalized.startsWith('multitrack/')) return 'private'
 
   // Обложки альбомов / событий: marinero/1234-abc.jpg
@@ -126,6 +127,9 @@ export function guessContentType(key: string): string {
     ogg: 'audio/ogg',
     m4a: 'audio/mp4',
     flac: 'audio/flac',
+    pdf: 'application/pdf',
+    svg: 'image/svg+xml',
+    txt: 'text/plain; charset=utf-8',
   }
   return map[ext ?? ''] ?? 'application/octet-stream'
 }
