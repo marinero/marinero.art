@@ -28,6 +28,7 @@ import type { SongDocument, SongDocumentKind } from '@/lib/types'
 const KIND_LABELS: Record<SongDocumentKind, string> = {
   sheet: 'Ноты',
   tab: 'Табы',
+  sheet_tab: 'Ноты + Табы',
   other: 'Другое',
 }
 
@@ -229,7 +230,7 @@ export function SongDocumentsManager({ songId }: SongDocumentsManagerProps) {
                     patchDocument(doc.id, { kind: value as SongDocumentKind })
                   }
                 >
-                  <SelectTrigger className="h-8 w-28">
+                  <SelectTrigger className="h-8 w-36">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

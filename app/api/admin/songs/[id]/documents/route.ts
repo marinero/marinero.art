@@ -4,7 +4,7 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { resolveSongText } from '@/lib/admin-resolve'
 import type { SongDocument } from '@/lib/types'
 
-const VALID_KINDS = ['sheet', 'tab', 'other'] as const
+const VALID_KINDS = ['sheet', 'tab', 'sheet_tab', 'other'] as const
 
 export async function GET(
   _request: Request,

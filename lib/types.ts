@@ -120,7 +120,7 @@ export interface SongTextChord {
 }
 
 // Documents attached to a song (sheet music, tabs, other files)
-export type SongDocumentKind = 'sheet' | 'tab' | 'other'
+export type SongDocumentKind = 'sheet' | 'tab' | 'sheet_tab' | 'other'
 
 export interface SongDocument {
   id: string

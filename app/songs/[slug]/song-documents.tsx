@@ -19,6 +19,7 @@ import type { SongDocument, SongDocumentKind } from '@/lib/types'
 const KIND_LABELS: Record<SongDocumentKind, string> = {
   sheet: 'Ноты',
   tab: 'Табы',
+  sheet_tab: 'Ноты + Табы',
   other: 'Документ',
 }
 
@@ -37,7 +38,8 @@ function isPdf(doc: SongDocument): boolean {
 
 function DocIcon({ doc }: { doc: SongDocument }) {
   if (isImage(doc)) return <FileImage className="h-5 w-5 text-primary" />
-  if (doc.kind === 'sheet') return <FileMusic className="h-5 w-5 text-primary" />
+  if (doc.kind === 'sheet' || doc.kind === 'sheet_tab')
+    return <FileMusic className="h-5 w-5 text-primary" />
   return <FileText className="h-5 w-5 text-primary" />
 }
 

@@ -5,7 +5,7 @@ import { deleteFile } from '@/lib/storage'
 import { extractStorageKey } from '@/lib/storage-keys'
 import type { SongDocument } from '@/lib/types'
 
-const VALID_KINDS = ['sheet', 'tab', 'other'] as const
+const VALID_KINDS = ['sheet', 'tab', 'sheet_tab', 'other'] as const
 
 export async function PATCH(
   request: Request,
