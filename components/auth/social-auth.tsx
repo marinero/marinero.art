@@ -34,7 +34,7 @@ export function SocialAuth({
   onError?: (message: string | null) => void
 }) {
   const [available, setAvailable] = useState<Set<string>>(new Set())
-  const [telegramBot, setTelegramBot] = useState<string | null>(null)
+  const [telegramBotId, setTelegramBotId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -43,12 +43,12 @@ export function SocialAuth({
     })
     fetch('/api/auth/social-config')
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setTelegramBot(data?.telegramBotUsername ?? null))
-      .catch(() => setTelegramBot(null))
+      .then((data) => setTelegramBotId(data?.telegramBotId ?? null))
+      .catch(() => setTelegramBotId(null))
   }, [])
 
   const enabledOAuth = OAUTH_PROVIDERS.filter((p) => available.has(p.id))
-  const hasTelegram = available.has('telegram') && !!telegramBot
+  const hasTelegram = available.has('telegram') && !!telegramBotId
   const hasAny = enabledOAuth.length > 0 || hasTelegram
 
   if (!hasAny) return null
@@ -78,8 +78,9 @@ export function SocialAuth({
 
         {hasTelegram && (
           <TelegramLoginButton
-            botUsername={telegramBot!}
+            botId={telegramBotId!}
             callbackUrl={callbackUrl}
+            label={label(mode, 'Telegram')}
             disabled={disabled || loading}
             onError={(message) => onError?.(message)}
           />
