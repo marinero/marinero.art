@@ -72,7 +72,22 @@ cp .env.production.example .env.production
 nano .env.production   # секреты, POSTGRES_PASSWORD, NEXTAUTH_SECRET, Google OAuth
 ```
 
-Google OAuth redirect URI для prod: `https://marinero.art/api/auth/callback/google`
+Соц-вход (все провайдеры опциональны — кнопка появляется, только когда заданы оба ключа).
+Redirect / callback URI для prod (в настройках каждого провайдера):
+
+| Провайдер | Callback URI |
+|-----------|--------------|
+| Google    | `https://marinero.art/api/auth/callback/google` |
+| Apple     | `https://marinero.art/api/auth/callback/apple` |
+| VK        | `https://marinero.art/api/auth/callback/vk` |
+| Yandex    | `https://marinero.art/api/auth/callback/yandex` |
+| Spotify   | `https://marinero.art/api/auth/callback/spotify` |
+| Facebook  | `https://marinero.art/api/auth/callback/facebook` |
+| Telegram  | Login Widget: в @BotFather задать домен `marinero.art` |
+
+Особенности:
+- **Apple**: `APPLE_CLIENT_ID` — это Services ID (напр. `art.marinero.web`), а не App ID. `APPLE_CLIENT_SECRET` — JWT, истекает максимум раз в 6 месяцев; перевыпуск: `pnpm auth:apple-secret` (нужны `APPLE_TEAM_ID`, `APPLE_KEY_ID` и файл `AuthKey_*.p8`). Apple не работает с http/localhost — только HTTPS.
+- **Telegram**: задать `TELEGRAM_BOT_TOKEN` и `TELEGRAM_BOT_USERNAME` (без `@`); домен бота в @BotFather должен совпадать с сайтом.
 
 ### 3. Первый деплой
 

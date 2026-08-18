@@ -11,6 +11,7 @@
     "storage:check-audio": "tsx scripts/check-audio-urls.ts",
     "storage:sync-s3": "bash scripts/sync-minio-to-s3.sh",
     "users:migrate": "tsx scripts/migrate-supabase-users.ts",
+    "auth:apple-secret": "node scripts/generate-apple-secret.mjs",
     "db:backup": "tsx scripts/backup-database.ts",
     "deploy:prod": "docker compose -f docker-compose.prod.yml up -d --build",
     "prod:fix-s3": "bash scripts/fix-prod-s3.sh",

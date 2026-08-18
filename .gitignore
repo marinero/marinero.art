@@ -15,7 +15,10 @@ tsconfig.tsbuildinfo
 .env.*
 !.env.production.example
 !.env.local.example
+!.env.apple.example
 *.pem
+*.p8
+/secrets/
 
 # OS
 .DS_Store
