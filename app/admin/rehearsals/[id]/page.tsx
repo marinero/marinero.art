@@ -40,6 +40,7 @@ import { useChordMap } from '@/hooks/use-chord-map'
 import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { Slider } from '@/components/ui/slider'
 import {
   Select,
@@ -70,7 +71,10 @@ import {
   Headphones,
   Download,
   Volume2,
-  VolumeX
+  VolumeX,
+  ClipboardList,
+  Save,
+  Loader2
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -134,6 +138,7 @@ interface RehearsalComment {
 interface Rehearsal {
   id: string
   rehearsal_date: string
+  plan?: string | null
   created_at: string
 }
 
@@ -181,6 +186,9 @@ export default function RehearsalDetailPage() {
   const { playArpeggio } = useGuitarAudio()
   const [rehearsal, setRehearsal] = useState<Rehearsal | null>(null)
   const [rehearsalId, setRehearsalId] = useState<string | null>(null)
+  const [planDraft, setPlanDraft] = useState('')
+  const [savedPlan, setSavedPlan] = useState('')
+  const [savingPlan, setSavingPlan] = useState(false)
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([])
   const [comments, setComments] = useState<RehearsalComment[]>([])
   const [audioComments, setAudioComments] = useState<Record<string, Comment[]>>({})
@@ -466,6 +474,27 @@ export default function RehearsalDetailPage() {
     setNewVideoComment(prev => prev + timestamp + ' ')
   }
 
+  async function savePlan() {
+    setSavingPlan(true)
+    try {
+      const response = await fetch(
+        `/api/admin/rehearsals/${encodeURIComponent(routeId)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: planDraft }),
+        }
+      )
+      if (!response.ok) throw new Error('Failed to save plan')
+      setSavedPlan(planDraft)
+      setRehearsal((prev) => (prev ? { ...prev, plan: planDraft } : prev))
+    } catch (error) {
+      console.error('Failed to save rehearsal plan:', error)
+    } finally {
+      setSavingPlan(false)
+    }
+  }
+
   async function loadRehearsal() {
     setLoading(true)
 
@@ -487,6 +516,8 @@ export default function RehearsalDetailPage() {
 
     setRehearsal(data.rehearsal)
     setRehearsalId(data.rehearsal.id)
+    setPlanDraft(data.rehearsal.plan || '')
+    setSavedPlan(data.rehearsal.plan || '')
     setAudioFiles(data.audio_files || [])
     setComments(data.comments || [])
     setAudioComments(data.audio_comments || {})
@@ -1200,6 +1231,50 @@ export default function RehearsalDetailPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column: Multitrack, Audio, Videos */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Rehearsal Plan Section - at the very top */}
+          {(isAdmin || savedPlan) && (
+            <Card className="border-amber-200 dark:border-amber-800">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
+                    <ClipboardList className="h-5 w-5 text-amber-600" />
+                    План репетиции
+                  </CardTitle>
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={savePlan}
+                      disabled={savingPlan || planDraft === savedPlan}
+                      className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950"
+                    >
+                      {savingPlan ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      {planDraft === savedPlan ? 'Сохранено' : 'Сохранить'}
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isAdmin ? (
+                  <RichTextEditor
+                    value={planDraft}
+                    onChange={setPlanDraft}
+                    placeholder="Что играем на этой репетиции..."
+                  />
+                ) : savedPlan ? (
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold"
+                    dangerouslySetInnerHTML={{ __html: savedPlan }}
+                  />
+                ) : null}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Multitrack Section - at the top */}
           <Card className="border-indigo-200 dark:border-indigo-800">
             <CardHeader>

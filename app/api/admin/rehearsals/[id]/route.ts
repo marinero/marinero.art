@@ -34,6 +34,7 @@ export async function GET(
   const rehearsal = await resolveRehearsal<{
     id: string
     rehearsal_date: string
+    plan: string | null
     created_at: string
   }>(idOrDate)
 
@@ -188,6 +189,18 @@ export async function PATCH(
     await db.query(
       'UPDATE audio_files SET song_text_id = $3 WHERE id = $1 AND rehearsal_id = $2',
       [body.audioFileId, rehearsal.id, body.song_text_id ?? null]
+    )
+    return NextResponse.json({ ok: true })
+  }
+
+  if ('plan' in body) {
+    const plan =
+      typeof body.plan === 'string' && body.plan.trim() !== ''
+        ? body.plan
+        : null
+    await db.query(
+      'UPDATE rehearsals SET plan = $2, updated_at = now() WHERE id = $1',
+      [rehearsal.id, plan]
     )
     return NextResponse.json({ ok: true })
   }

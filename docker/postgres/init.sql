@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS "videos" (
 CREATE TABLE IF NOT EXISTS "rehearsals" (
     "id"             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     "rehearsal_date" date NOT NULL,
+    "plan"           text,
     "created_at"     timestamp with time zone DEFAULT now(),
     "updated_at"     timestamp with time zone DEFAULT now()
 );
