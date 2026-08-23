@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
+import {
+  getEventSetlist,
+  listSongsForSetlist,
+  saveEventSongs,
+} from '@/lib/event-setlist'
 
 async function saveEventRelations(
   eventId: string,
@@ -36,7 +41,7 @@ export async function GET(
 
   const { id } = await params
 
-  const [albumRows, videoRows] = await Promise.all([
+  const [albumRows, videoRows, setlist, songs] = await Promise.all([
     db.queryMany<{ album_id: string }>(
       `SELECT album_id FROM event_albums
        WHERE event_id = $1
@@ -49,11 +54,16 @@ export async function GET(
        ORDER BY display_order ASC`,
       [id]
     ),
+    getEventSetlist(id),
+    listSongsForSetlist(),
   ])
 
   return NextResponse.json({
     albumIds: albumRows.map((row) => row.album_id),
     videoIds: videoRows.map((row) => row.video_id),
+    songIds: setlist.map((song) => song.id),
+    setlist,
+    songs,
   })
 }
 
@@ -72,6 +82,11 @@ export async function PATCH(
       'UPDATE events SET is_published = $2, updated_at = now() WHERE id = $1',
       [id, body.is_published]
     )
+    return NextResponse.json({ ok: true })
+  }
+
+  if (Array.isArray(body.songIds) && body.title === undefined) {
+    await saveEventSongs(id, body.songIds)
     return NextResponse.json({ ok: true })
   }
 
@@ -116,6 +131,9 @@ export async function PATCH(
 
   if (Array.isArray(body.albumIds) && Array.isArray(body.videoIds)) {
     await saveEventRelations(id, body.albumIds, body.videoIds)
+  }
+  if (Array.isArray(body.songIds)) {
+    await saveEventSongs(id, body.songIds)
   }
 
   return NextResponse.json({ ok: true })

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
+import { listSongsForSetlist, saveEventSongs } from '@/lib/event-setlist'
 
 async function saveEventRelations(
   eventId: string,
@@ -31,13 +32,14 @@ export async function GET() {
   const authResult = await requireAdmin()
   if ('error' in authResult && authResult.error) return authResult.error
 
-  const [events, albums, videos] = await Promise.all([
+  const [events, albums, videos, songs] = await Promise.all([
     db.queryMany('SELECT * FROM events ORDER BY event_date ASC'),
     db.queryMany('SELECT * FROM albums ORDER BY event_date DESC NULLS LAST'),
     db.queryMany('SELECT * FROM videos ORDER BY order_index ASC'),
+    listSongsForSetlist(),
   ])
 
-  return NextResponse.json({ events, albums, videos })
+  return NextResponse.json({ events, albums, videos, songs })
 }
 
 export async function POST(request: Request) {
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
   const body = await request.json()
   const albumIds: string[] = body.albumIds ?? []
   const videoIds: string[] = body.videoIds ?? []
+  const songIds: string[] = body.songIds ?? []
 
   const created = await db.queryOne<{ id: string }>(
     `INSERT INTO events (
@@ -79,6 +82,7 @@ export async function POST(request: Request) {
   }
 
   await saveEventRelations(created.id, albumIds, videoIds)
+  await saveEventSongs(created.id, songIds)
 
   return NextResponse.json({ id: created.id })
 }

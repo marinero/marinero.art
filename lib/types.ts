@@ -91,7 +91,8 @@ export interface SongText {
   title: string
   slug: string
   text_content: string
-  bpm: number | null
+  bpm: string | null
+  tech_meta?: Record<string, unknown>
   is_published: boolean
   created_by: string | null
   created_at: string

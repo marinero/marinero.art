@@ -12,6 +12,8 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { upload } from '@/lib/upload-client'
 import type { Event, Album, Video as VideoType } from '@/lib/types'
+import type { SetlistSong } from '@/lib/song-tech'
+import { ConcertSetlistEditor } from '@/components/concerts/concert-setlist-editor'
 import { resolveAssetUrl } from '@/lib/storage-keys'
 import { Checkbox } from '@/components/ui/checkbox'
 
@@ -26,6 +28,8 @@ export default function AdminEventsPage() {
   const [selectedAlbumIds, setSelectedAlbumIds] = useState<string[]>([])
   const [allVideos, setAllVideos] = useState<VideoType[]>([])
   const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([])
+  const [allSongs, setAllSongs] = useState<SetlistSong[]>([])
+  const [selectedSongIds, setSelectedSongIds] = useState<string[]>([])
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -59,6 +63,7 @@ export default function AdminEventsPage() {
     setEvents(data.events || [])
     setAllAlbums(data.albums || [])
     setAllVideos(data.videos || [])
+    setAllSongs(data.songs || [])
     setLoading(false)
   }
 
@@ -69,6 +74,7 @@ export default function AdminEventsPage() {
     const data = await response.json()
     setSelectedAlbumIds(data.albumIds || [])
     setSelectedVideoIds(data.videoIds || [])
+    setSelectedSongIds(data.songIds || [])
   }
 
   function resetForm() {
@@ -93,6 +99,7 @@ export default function AdminEventsPage() {
     setIsCreating(false)
     setSelectedAlbumIds([])
     setSelectedVideoIds([])
+    setSelectedSongIds([])
   }
 
   function startEdit(event: Event) {
@@ -207,6 +214,7 @@ export default function AdminEventsPage() {
       ...eventData,
       albumIds: selectedAlbumIds,
       videoIds: selectedVideoIds,
+      songIds: selectedSongIds,
     }
 
     if (editingEvent) {
@@ -572,6 +580,12 @@ export default function AdminEventsPage() {
                   )}
                 </div>
               </div>
+              <ConcertSetlistEditor
+                allSongs={allSongs}
+                selectedIds={selectedSongIds}
+                onSelectedIdsChange={setSelectedSongIds}
+                onCatalogChange={setAllSongs}
+              />
               <div className="flex gap-2">
                 <Button type="submit">
                   {editingEvent ? 'Сохранить' : 'Создать'}

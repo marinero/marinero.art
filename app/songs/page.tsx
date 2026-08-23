@@ -21,7 +21,7 @@ export default async function SongsPage() {
     id: string
     title: string
     slug: string
-    bpm: number | null
+    bpm: string | null
     is_published: boolean
     created_at: string
   }>(

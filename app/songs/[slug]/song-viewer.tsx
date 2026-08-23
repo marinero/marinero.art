@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,7 @@ import type { SongText, SongTextChord, Chord, CommentChord, Profile } from '@/li
 interface SongViewerProps {
   song: SongText
   chords: SongTextChord[]
+  children?: ReactNode
 }
 
 interface SongComment {
@@ -35,7 +36,7 @@ interface SongComment {
   replies: SongComment[]
 }
 
-export function SongViewer({ song, chords }: SongViewerProps) {
+export function SongViewer({ song, chords, children }: SongViewerProps) {
   const [activeChord, setActiveChord] = useState<Chord | null>(null)
   const [showChordDiagrams, setShowChordDiagrams] = useState(true)
   const { playArpeggio, isPlaying } = useGuitarAudio()
@@ -177,9 +178,8 @@ export function SongViewer({ song, chords }: SongViewerProps) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="text-center space-y-2">
+    <div className="space-y-6">
+      <div className="mx-auto max-w-4xl space-y-2 text-center">
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <h1 className="text-3xl font-bold">{song.title}</h1>
           {!song.is_published && (
@@ -197,6 +197,9 @@ export function SongViewer({ song, chords }: SongViewerProps) {
         )}
       </div>
 
+      {children ? <div className="mx-auto max-w-4xl">{children}</div> : null}
+
+      <div className="mx-auto max-w-4xl space-y-6">
       {/* Chord palette */}
       {uniqueChords.length > 0 && (
         <Card>
@@ -458,6 +461,7 @@ export function SongViewer({ song, chords }: SongViewerProps) {
           )}
         </CardContent>
       </Card>
+      </div>
 
       {/* Active chord detail (mobile-friendly) */}
       {activeChord && (

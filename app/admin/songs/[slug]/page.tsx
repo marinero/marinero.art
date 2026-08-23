@@ -11,6 +11,8 @@ import { ChordDiagram } from '@/components/songs/chord-diagram'
 import { ChordLibrary, type ChordLibraryRef } from '@/components/songs/chord-library'
 import { ChordEditor } from '@/components/songs/chord-editor'
 import { SongDocumentsManager } from './song-documents-manager'
+import { SongTechForm } from '@/components/songs/song-tech-form'
+import { emptyTechMeta, normalizeTechMeta, type TechMeta } from '@/lib/song-tech'
 import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { ArrowLeft, Save, Eye, Music, Trash2, Volume2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -26,6 +28,7 @@ export default function SongEditorPage() {
   const [title, setTitle] = useState('')
   const [textContent, setTextContent] = useState('')
   const [bpm, setBpm] = useState('')
+  const [techMeta, setTechMeta] = useState<TechMeta>(emptyTechMeta())
   const [chords, setChords] = useState<SongTextChord[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -55,6 +58,7 @@ export default function SongEditorPage() {
     setTitle(songData.title)
     setTextContent(songData.text_content || '')
     setBpm(songData.bpm?.toString() || '')
+    setTechMeta(normalizeTechMeta(songData.tech_meta))
     setChords((data.chords || []) as SongTextChord[])
     setLoading(false)
   }
@@ -71,7 +75,8 @@ export default function SongEditorPage() {
         body: JSON.stringify({
           title: title.trim(),
           text_content: textContent,
-          bpm: bpm ? parseInt(bpm) : null,
+          bpm: bpm.trim() || null,
+          tech_meta: techMeta,
           chords: chords.map((c) => ({
             chord_id: c.chord_id,
             position: c.position,
@@ -217,23 +222,45 @@ export default function SongEditorPage() {
         </div>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Техническая метаинформация</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Только для админов. Эти поля видны в плейлисте концерта.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {song && (
+            <SongTechForm
+              songId={song.id}
+              bpm={bpm.trim() || null}
+              techMeta={techMeta}
+              onPatch={async (payload) => {
+                const nextBpm = payload.bpm !== undefined ? payload.bpm : bpm.trim() || null
+                const nextMeta = payload.tech_meta ?? techMeta
+                const res = await fetch(`/api/admin/songs/${song.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    bpm: nextBpm,
+                    tech_meta: nextMeta,
+                  }),
+                })
+                if (!res.ok) {
+                  toast.error('Не удалось сохранить метаданные')
+                  return
+                }
+                if (payload.bpm !== undefined) setBpm(payload.bpm ?? '')
+                if (payload.tech_meta) setTechMeta(payload.tech_meta)
+              }}
+            />
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Text Editor - Left Column (1/3) */}
         <div className="lg:col-span-1 space-y-4">
-          {/* BPM */}
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium">BPM:</label>
-            <Input
-              type="number"
-              value={bpm}
-              onChange={(e) => setBpm(e.target.value)}
-              className="w-24"
-              min={40}
-              max={300}
-              placeholder="120"
-            />
-          </div>
-
           {/* Text with chords visualization */}
           <Card>
             <CardHeader>

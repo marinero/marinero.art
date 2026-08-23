@@ -80,7 +80,7 @@ export default function AdminSongsPage() {
     const songData = {
       title: formData.title.trim(),
       slug: generateSlug(formData.title),
-      bpm: formData.bpm ? parseInt(formData.bpm) : null,
+      bpm: formData.bpm.trim() || null,
       is_published: formData.is_published,
       text_content: ''
     }
@@ -201,12 +201,10 @@ export default function AdminSongsPage() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">BPM</label>
                       <Input
-                        type="number"
+                        type="text"
                         value={formData.bpm}
                         onChange={(e) => setFormData({ ...formData, bpm: e.target.value })}
-                        placeholder="120"
-                        min={40}
-                        max={300}
+                        placeholder="115/120"
                       />
                     </div>
                   </div>

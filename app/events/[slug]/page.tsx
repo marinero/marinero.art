@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { fetchNormalizedComments, buildCommentTree } from '@/lib/comments-client'
 import { resolveAssetUrl } from '@/lib/storage-keys'
 import { Header } from '@/components/layout/header'
+import { EventAdminSetlist } from '@/components/concerts/event-admin-setlist'
 import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
 import { CommentContent } from '@/components/comments/comment-content'
@@ -322,6 +323,14 @@ export default function EventPage() {
             </div>
           </div>
         </section>
+
+        {isAdmin && (
+          <section className="py-8">
+            <div className="container mx-auto px-4">
+              <EventAdminSetlist eventId={event.id} />
+            </div>
+          </section>
+        )}
 
         {/* Details Section */}
         <section className="py-12">

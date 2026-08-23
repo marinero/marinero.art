@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
 import { resolveSongText } from '@/lib/admin-resolve'
+import { normalizeTechMeta } from '@/lib/song-tech'
 
 export async function GET(
   _request: Request,
@@ -54,20 +55,35 @@ export async function PATCH(
     return NextResponse.json({ ok: true })
   }
 
-  await db.query(
-    `UPDATE song_texts SET
-       title = COALESCE($2, title),
-       text_content = COALESCE($3, text_content),
-       bpm = $4,
-       updated_at = now()
-     WHERE id = $1`,
-    [
-      song.id,
-      body.title ?? null,
-      body.text_content ?? null,
-      body.bpm ?? null,
-    ]
-  )
+  const sets: string[] = ['updated_at = now()']
+  const values: unknown[] = []
+  let index = 2
+
+  if (typeof body.title === 'string') {
+    sets.push(`title = $${index++}`)
+    values.push(body.title)
+  }
+  if (typeof body.text_content === 'string') {
+    sets.push(`text_content = $${index++}`)
+    values.push(body.text_content)
+  }
+  if (body.bpm !== undefined) {
+    const bpm =
+      typeof body.bpm === 'string' ? body.bpm.trim() || null : body.bpm
+    sets.push(`bpm = $${index++}`)
+    values.push(bpm)
+  }
+  if (body.tech_meta !== undefined) {
+    sets.push(`tech_meta = $${index++}::jsonb`)
+    values.push(JSON.stringify(normalizeTechMeta(body.tech_meta)))
+  }
+
+  if (sets.length > 1) {
+    await db.query(
+      `UPDATE song_texts SET ${sets.join(', ')} WHERE id = $1`,
+      [song.id, ...values]
+    )
+  }
 
   if (Array.isArray(body.chords)) {
     await db.query('DELETE FROM song_text_chords WHERE song_text_id = $1', [
