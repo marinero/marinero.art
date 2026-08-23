@@ -271,7 +271,7 @@ export default function AdminSongsPage() {
                             <EyeOff className="h-4 w-4" />
                           )}
                         </Button>
-                        <Link href={`/admin/songs/${song.slug}`}>
+                        <Link href={`/songs/${song.slug}`}>
                           <Button variant="ghost" size="icon">
                             <Pencil className="h-4 w-4" />
                           </Button>

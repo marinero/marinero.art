@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { TextWithChords } from '@/components/songs/text-with-chords'
 import { CommentContent } from '@/components/comments/comment-content'
 import { CommentChordComposer } from '@/components/comments/comment-chord-composer'
 import { ChordDiagram } from '@/components/songs/chord-diagram'
 import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { AdminUserHoverCard } from '@/components/admin/user-hover-card'
-import { Music, Volume2, VolumeX, MessageCircle, Send, Trash2, Reply, Loader2, EyeOff } from 'lucide-react'
+import { Music, Volume2, VolumeX, MessageCircle, Send, Trash2, Reply, Loader2, EyeOff, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -18,10 +20,30 @@ import { fetchNormalizedComments, buildCommentTree } from '@/lib/comments-client
 import { buildChordMap } from '@/lib/text-chords'
 import type { SongText, SongTextChord, Chord, CommentChord, Profile } from '@/lib/types'
 
+export type SongViewerEditor = {
+  title: string
+  onTitleChange: (value: string) => void
+  onSave: () => void
+  saving: boolean
+  draggedChord: Chord | null
+  hoveredPosition: number | null
+  onHoverPosition: (pos: number | null) => void
+  onDrop: (position: number) => void
+  onRemoveChord: (position: number) => void
+  onTextChange: (
+    newText: string,
+    cursorPosition?: number,
+    changeType?: 'insert' | 'delete',
+    changeLength?: number
+  ) => void
+  tools?: ReactNode
+}
+
 interface SongViewerProps {
   song: SongText
   chords: SongTextChord[]
   children?: ReactNode
+  editor?: SongViewerEditor
 }
 
 interface SongComment {
@@ -36,7 +58,7 @@ interface SongComment {
   replies: SongComment[]
 }
 
-export function SongViewer({ song, chords, children }: SongViewerProps) {
+export function SongViewer({ song, chords, children, editor }: SongViewerProps) {
   const [activeChord, setActiveChord] = useState<Chord | null>(null)
   const [showChordDiagrams, setShowChordDiagrams] = useState(true)
   const { playArpeggio, isPlaying } = useGuitarAudio()
@@ -99,6 +121,11 @@ export function SongViewer({ song, chords, children }: SongViewerProps) {
   const handleChordClick = (chord: Chord) => {
     setActiveChord(chord)
     playArpeggio(chord.fret_positions as number[])
+  }
+
+  const handleChordClickFromPosition = (position: number) => {
+    const chord = chords.find((c) => c.position === position)?.chord
+    if (chord) handleChordClick(chord)
   }
 
   async function submitComment(e: React.FormEvent) {
@@ -181,7 +208,15 @@ export function SongViewer({ song, chords, children }: SongViewerProps) {
     <div className="space-y-6">
       <div className="mx-auto max-w-4xl space-y-2 text-center">
         <div className="flex items-center justify-center gap-2 flex-wrap">
-          <h1 className="text-3xl font-bold">{song.title}</h1>
+          {editor ? (
+            <Input
+              value={editor.title}
+              onChange={(e) => editor.onTitleChange(e.target.value)}
+              className="h-auto max-w-xl border-transparent px-2 py-1 text-center text-3xl font-bold hover:border-input focus:border-input"
+            />
+          ) : (
+            <h1 className="text-3xl font-bold">{song.title}</h1>
+          )}
           {!song.is_published && (
             <Badge
               variant="outline"
@@ -191,6 +226,12 @@ export function SongViewer({ song, chords, children }: SongViewerProps) {
               Черновик
             </Badge>
           )}
+          {editor ? (
+            <Button onClick={editor.onSave} disabled={editor.saving} className="gap-2">
+              <Save className="h-4 w-4" />
+              {editor.saving ? 'Сохранение...' : 'Сохранить'}
+            </Button>
+          ) : null}
         </div>
         {song.bpm && (
           <p className="text-muted-foreground">{song.bpm} BPM</p>
@@ -199,7 +240,7 @@ export function SongViewer({ song, chords, children }: SongViewerProps) {
 
       {children ? <div className="mx-auto max-w-4xl">{children}</div> : null}
 
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className={cn('mx-auto space-y-6', editor ? 'max-w-6xl' : 'max-w-4xl')}>
       {/* Chord palette */}
       {uniqueChords.length > 0 && (
         <Card>
@@ -269,15 +310,32 @@ export function SongViewer({ song, chords, children }: SongViewerProps) {
       {/* Song text with chords */}
       <Card>
         <CardContent className="p-6">
-          <SongTextDisplay
-            text={song.text_content}
-            chords={chords}
-            onChordClick={handleChordClick}
-            activeChordId={activeChord?.id}
-            isPlaying={isPlaying}
-          />
+          {editor ? (
+            <TextWithChords
+              text={song.text_content}
+              chords={chords}
+              draggedChord={editor.draggedChord}
+              hoveredPosition={editor.hoveredPosition}
+              onHoverPosition={editor.onHoverPosition}
+              onDrop={editor.onDrop}
+              onRemoveChord={editor.onRemoveChord}
+              onPlayChord={handleChordClickFromPosition}
+              onTextChange={editor.onTextChange}
+              isPlaying={isPlaying}
+            />
+          ) : (
+            <SongTextDisplay
+              text={song.text_content}
+              chords={chords}
+              onChordClick={handleChordClick}
+              activeChordId={activeChord?.id}
+              isPlaying={isPlaying}
+            />
+          )}
         </CardContent>
       </Card>
+
+      {editor?.tools ? <div className="space-y-4">{editor.tools}</div> : null}
 
       {/* Comments Section */}
       <Card className="overflow-visible">

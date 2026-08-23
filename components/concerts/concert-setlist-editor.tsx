@@ -134,7 +134,7 @@ export function ConcertSetlistEditor({
       <SetlistTable
         variant="concert"
         songs={selectedSongs}
-        songHref={(song) => `/admin/songs/${song.slug}`}
+        songHref={(song) => `/songs/${song.slug}`}
         onPatchSong={patchSong}
         onReorder={reorder}
         onRemove={(id) => onSelectedIdsChange(selectedIds.filter((item) => item !== id))}

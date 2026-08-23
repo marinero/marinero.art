@@ -6,9 +6,9 @@ import { Footer } from '@/components/layout/footer'
 import { SongViewer } from './song-viewer'
 import { SongRehearsals, type RehearsalTake } from './song-rehearsals'
 import { SongDocuments } from './song-documents'
-import { SongAdminTech } from '@/components/songs/song-admin-tech'
+import { SongAdminWorkspace } from '@/components/songs/song-admin-workspace'
+import { SongDocumentsManager } from '@/app/admin/songs/[slug]/song-documents-manager'
 import { RestrictedNotice } from '@/components/layout/restricted-notice'
-import { normalizeSetlistSong } from '@/lib/song-tech'
 import type {
   Chord,
   SongText,
@@ -151,28 +151,20 @@ export default async function SongPage({ params }: PageProps) {
     <div className="min-h-screen flex flex-col">
       <Header user={user} isAdmin={isAdmin} displayName={displayName} />
       <main className="flex-1 container mx-auto px-4 py-8">
-        <SongViewer 
-          song={song} 
-          chords={chords} 
-        >
-          {isAdmin ? (
-            <SongAdminTech
-              song={normalizeSetlistSong({
-                id: song.id,
-                title: song.title,
-                slug: song.slug,
-                bpm: song.bpm,
-                tech_meta: song.tech_meta,
-                documents: [],
-              })}
-            />
-          ) : null}
-        </SongViewer>
-        {documents.length > 0 && (
-          <div className="max-w-4xl mx-auto mt-6">
-            <SongDocuments documents={documents} isAdmin={isAdmin} />
-          </div>
+        {isAdmin ? (
+          <SongAdminWorkspace song={song} chords={chords} />
+        ) : (
+          <SongViewer song={song} chords={chords} />
         )}
+        {isAdmin ? (
+          <div className="mx-auto mt-6 max-w-4xl">
+            <SongDocumentsManager songId={song.id} />
+          </div>
+        ) : documents.length > 0 ? (
+          <div className="max-w-4xl mx-auto mt-6">
+            <SongDocuments documents={documents} isAdmin={false} />
+          </div>
+        ) : null}
         {showMedia && (
           <div className="max-w-4xl mx-auto mt-6">
             <SongRehearsals
