@@ -15,16 +15,19 @@ import { ChordEditor } from '@/components/songs/chord-editor'
 import { ChordLibrary, type ChordLibraryRef } from '@/components/songs/chord-library'
 import { SongViewer, type SongViewerEditor } from '@/app/songs/[slug]/song-viewer'
 import { SongTechForm } from '@/components/songs/song-tech-form'
+import { SongListenEditor } from '@/components/songs/song-listen-editor'
 import { normalizeTechMeta, type TechMeta } from '@/lib/song-tech'
 import { toast } from 'sonner'
-import type { Chord, SongText, SongTextChord } from '@/lib/types'
+import type { Chord, SongLink, SongText, SongTextChord } from '@/lib/types'
 
 export function SongAdminWorkspace({
   song: initialSong,
   chords: initialChords,
+  links,
 }: {
   song: SongText
   chords: SongTextChord[]
+  links: SongLink[]
 }) {
   const [song, setSong] = useState(initialSong)
   const [title, setTitle] = useState(initialSong.title)
@@ -209,26 +212,35 @@ export function SongAdminWorkspace({
       chords={chords}
       editor={editor}
     >
-      <SongTechForm
-        songId={song.id}
-        bpm={bpm.trim() || null}
-        techMeta={techMeta}
-        onPatch={async (payload) => {
-          const nextBpm = payload.bpm !== undefined ? payload.bpm : bpm.trim() || null
-          const nextMeta = payload.tech_meta ?? techMeta
-          const res = await fetch(`/api/admin/songs/${song.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bpm: nextBpm, tech_meta: nextMeta }),
-          })
-          if (!res.ok) {
-            toast.error('Не удалось сохранить метаданные')
-            return
-          }
-          if (payload.bpm !== undefined) setBpm(payload.bpm ?? '')
-          if (payload.tech_meta) setTechMeta(payload.tech_meta)
-        }}
-      />
+      <div className="space-y-4">
+        <SongListenEditor
+          songId={song.id}
+          title={title}
+          audioUrl={song.audio_url}
+          audioFilename={song.audio_filename}
+          links={links}
+        />
+        <SongTechForm
+          songId={song.id}
+          bpm={bpm.trim() || null}
+          techMeta={techMeta}
+          onPatch={async (payload) => {
+            const nextBpm = payload.bpm !== undefined ? payload.bpm : bpm.trim() || null
+            const nextMeta = payload.tech_meta ?? techMeta
+            const res = await fetch(`/api/admin/songs/${song.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ bpm: nextBpm, tech_meta: nextMeta }),
+            })
+            if (!res.ok) {
+              toast.error('Не удалось сохранить метаданные')
+              return
+            }
+            if (payload.bpm !== undefined) setBpm(payload.bpm ?? '')
+            if (payload.tech_meta) setTechMeta(payload.tech_meta)
+          }}
+        />
+      </div>
     </SongViewer>
   )
 }

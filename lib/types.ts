@@ -86,6 +86,16 @@ export interface PlatformLink {
 }
 
 // Song Texts & Chords
+export interface SongLink {
+  id: string
+  song_text_id: string
+  platform: string
+  url: string
+  icon: string | null
+  order_index: number
+  created_at: string
+}
+
 export interface SongText {
   id: string
   title: string
@@ -95,9 +105,12 @@ export interface SongText {
   tech_meta?: Record<string, unknown>
   is_published: boolean
   created_by: string | null
+  audio_url?: string | null
+  audio_filename?: string | null
   created_at: string
   updated_at: string
   chords?: SongTextChord[]
+  links?: SongLink[]
 }
 
 export interface Chord {

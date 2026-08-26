@@ -165,16 +165,31 @@ CREATE TABLE IF NOT EXISTS "chords" (
 );
 
 CREATE TABLE IF NOT EXISTS "song_texts" (
-    "id"           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    "title"        text NOT NULL,
-    "slug"         text NOT NULL UNIQUE,
-    "text_content" text NOT NULL,
-    "bpm"          integer,
-    "is_published" boolean DEFAULT false,
-    "created_by"   uuid REFERENCES users(id),
-    "created_at"   timestamp with time zone DEFAULT now(),
-    "updated_at"   timestamp with time zone DEFAULT now()
+    "id"             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    "title"          text NOT NULL,
+    "slug"           text NOT NULL UNIQUE,
+    "text_content"   text NOT NULL,
+    "bpm"            integer,
+    "is_published"   boolean DEFAULT false,
+    "created_by"     uuid REFERENCES users(id),
+    "audio_url"      text,
+    "audio_filename" text,
+    "created_at"     timestamp with time zone DEFAULT now(),
+    "updated_at"     timestamp with time zone DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS "song_links" (
+    "id"           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    "song_text_id" uuid NOT NULL REFERENCES song_texts(id) ON DELETE CASCADE,
+    "platform"     text NOT NULL,
+    "url"          text NOT NULL,
+    "icon"         text,
+    "order_index"  integer DEFAULT 0,
+    "created_at"   timestamp with time zone DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS song_links_song_text_id_idx
+    ON song_links(song_text_id);
 
 CREATE TABLE IF NOT EXISTS "song_text_chords" (
     "id"           uuid DEFAULT gen_random_uuid() PRIMARY KEY,

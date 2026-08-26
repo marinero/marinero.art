@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-auth'
 import { resolveSongText } from '@/lib/admin-resolve'
 import { normalizeTechMeta } from '@/lib/song-tech'
+import { deleteStoredAudio, replaceSongLinks } from '@/lib/song-links'
 
 export async function GET(
   _request: Request,
@@ -39,7 +40,10 @@ export async function PATCH(
   if ('error' in authResult && authResult.error) return authResult.error
 
   const { id: idOrSlug } = await params
-  const song = await resolveSongText<{ id: string }>(idOrSlug)
+  const song = await resolveSongText<{
+    id: string
+    audio_url: string | null
+  }>(idOrSlug)
 
   if (!song) {
     return NextResponse.json({ error: 'Song not found' }, { status: 404 })
@@ -77,12 +81,35 @@ export async function PATCH(
     sets.push(`tech_meta = $${index++}::jsonb`)
     values.push(JSON.stringify(normalizeTechMeta(body.tech_meta)))
   }
+  if (body.audio_url !== undefined) {
+    const nextUrl =
+      typeof body.audio_url === 'string' && body.audio_url.trim()
+        ? body.audio_url.trim()
+        : null
+    if (song.audio_url && song.audio_url !== nextUrl) {
+      await deleteStoredAudio(song.audio_url)
+    }
+    sets.push(`audio_url = $${index++}`)
+    values.push(nextUrl)
+  }
+  if (body.audio_filename !== undefined) {
+    const nextName =
+      typeof body.audio_filename === 'string' && body.audio_filename.trim()
+        ? body.audio_filename.trim()
+        : null
+    sets.push(`audio_filename = $${index++}`)
+    values.push(nextName)
+  }
 
   if (sets.length > 1) {
     await db.query(
       `UPDATE song_texts SET ${sets.join(', ')} WHERE id = $1`,
       [song.id, ...values]
     )
+  }
+
+  if (Array.isArray(body.links)) {
+    await replaceSongLinks(song.id, body.links)
   }
 
   if (Array.isArray(body.chords)) {
@@ -110,12 +137,13 @@ export async function DELETE(
   if ('error' in authResult && authResult.error) return authResult.error
 
   const { id: idOrSlug } = await params
-  const song = await resolveSongText<{ id: string }>(idOrSlug)
+  const song = await resolveSongText<{ id: string; audio_url: string | null }>(idOrSlug)
 
   if (!song) {
     return NextResponse.json({ error: 'Song not found' }, { status: 404 })
   }
 
+  await deleteStoredAudio(song.audio_url)
   await db.query('DELETE FROM song_texts WHERE id = $1', [song.id])
 
   return NextResponse.json({ ok: true })

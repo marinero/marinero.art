@@ -219,6 +219,7 @@ const URL_COLUMNS: UrlColumn[] = [
   { table: 'profiles', column: 'avatar_url' },
   { table: 'audio_files', column: 'file_url' },
   { table: 'multitrack_files', column: 'file_url' },
+  { table: 'song_texts', column: 'audio_url' },
 ]
 
 async function collectDbKeys(pool: Pool): Promise<Map<string, string[]>> {

@@ -8,12 +8,14 @@ import { SongRehearsals, type RehearsalTake } from './song-rehearsals'
 import { SongDocuments } from './song-documents'
 import { SongAdminWorkspace } from '@/components/songs/song-admin-workspace'
 import { SongDocumentsManager } from '@/app/admin/songs/[slug]/song-documents-manager'
+import { SongListenPlayer } from '@/components/songs/song-listen-player'
 import { RestrictedNotice } from '@/components/layout/restricted-notice'
 import type {
   Chord,
   SongText,
   SongTextChord,
   SongDocument,
+  SongLink,
   AudioFile,
   Video,
   MultitrackGroup,
@@ -125,6 +127,13 @@ export default async function SongPage({ params }: PageProps) {
     chord: row.chord,
   }))
 
+  const songLinks = await db.queryMany<SongLink>(
+    `SELECT * FROM song_links
+     WHERE song_text_id = $1
+     ORDER BY order_index ASC, created_at ASC`,
+    [song.id]
+  )
+
   // Admins see rehearsal recordings/multitracks (internal) plus every tagged
   // video. Regular users only see published videos tagged with this song
   // (the song itself is already guaranteed published for them by the query above).
@@ -152,9 +161,17 @@ export default async function SongPage({ params }: PageProps) {
       <Header user={user} isAdmin={isAdmin} displayName={displayName} />
       <main className="flex-1 container mx-auto px-4 py-8">
         {isAdmin ? (
-          <SongAdminWorkspace song={song} chords={chords} />
+          <SongAdminWorkspace song={song} chords={chords} links={songLinks} />
         ) : (
-          <SongViewer song={song} chords={chords} />
+          <SongViewer song={song} chords={chords}>
+            {song.audio_url || songLinks.length > 0 ? (
+              <SongListenPlayer
+                title={song.title}
+                audioUrl={song.audio_url}
+                links={songLinks}
+              />
+            ) : null}
+          </SongViewer>
         )}
         {isAdmin ? (
           <div className="mx-auto mt-6 max-w-4xl">
