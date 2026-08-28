@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import {
@@ -16,6 +16,7 @@ import {
   Redo2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { enhancePlanHtml, isUrlLikeLabel, songSlugFromHref } from '@/lib/plan-links'
 
 interface RichTextEditorProps {
   value: string
@@ -23,6 +24,7 @@ interface RichTextEditorProps {
   editable?: boolean
   placeholder?: string
   className?: string
+  songTitles?: { slug: string; title: string }[]
 }
 
 function ToolbarButton({
@@ -145,35 +147,86 @@ function Toolbar({ editor }: { editor: Editor }) {
   )
 }
 
+function humanizeSongLinkText(
+  editor: Editor,
+  songs: { slug: string; title: string }[]
+): boolean {
+  if (!songs.length) return false
+  const titles = new Map(songs.map((song) => [song.slug, song.title]))
+  const replacements: { from: number; to: number; title: string; href: string }[] = []
+
+  editor.state.doc.descendants((node, pos) => {
+    if (!node.isText) return
+    const mark = node.marks.find((item) => item.type.name === 'link')
+    if (!mark) return
+    const href = String(mark.attrs.href || '')
+    const slug = songSlugFromHref(href)
+    const title = slug ? titles.get(slug) : undefined
+    if (!title || node.text === title) return
+    if (!isUrlLikeLabel(node.text || '', href)) return
+    replacements.push({ from: pos, to: pos + node.nodeSize, title, href })
+  })
+
+  if (replacements.length === 0) return false
+
+  const { tr } = editor.state
+  for (const item of replacements.reverse()) {
+    const mark = editor.schema.marks.link?.create({
+      href: item.href,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+    })
+    tr.insertText(item.title, item.from, item.to)
+    if (mark) tr.addMark(item.from, item.from + item.title.length, mark)
+  }
+  editor.view.dispatch(tr)
+  return true
+}
+
 export function RichTextEditor({
   value,
   onChange,
   editable = true,
   placeholder,
   className,
+  songTitles = [],
 }: RichTextEditorProps) {
+  const songTitlesRef = useRef(songTitles)
+  songTitlesRef.current = songTitles
+
   const editor = useEditor({
     immediatelyRender: false,
     editable,
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
-        link: false,
+        link: {
+          openOnClick: true,
+          autolink: true,
+          defaultProtocol: 'https',
+          HTMLAttributes: {
+            class: 'text-primary underline underline-offset-2',
+            rel: 'noopener noreferrer',
+            target: '_blank',
+          },
+        },
       }),
     ],
-    content: value || '',
+    content: enhancePlanHtml(value || '', songTitles),
     editorProps: {
       attributes: {
         class: cn(
           'prose prose-sm dark:prose-invert max-w-none min-h-40 px-3 py-2 focus:outline-none',
           '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5',
           '[&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground',
-          '[&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold'
+          '[&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold',
+          '[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_a]:break-words'
         ),
       },
     },
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML()
+    onUpdate: ({ editor: current }) => {
+      if (humanizeSongLinkText(current, songTitlesRef.current)) return
+      const html = current.getHTML()
       onChange(html === '<p></p>' ? '' : html)
     },
   })
@@ -182,11 +235,11 @@ export function RichTextEditor({
   useEffect(() => {
     if (!editor) return
     const current = editor.getHTML()
-    const next = value || ''
+    const next = enhancePlanHtml(value || '', songTitles)
     if (next !== current && next !== '') {
       editor.commands.setContent(next, { emitUpdate: false })
     }
-  }, [value, editor])
+  }, [value, editor, songTitles])
 
   useEffect(() => {
     editor?.setEditable(editable)

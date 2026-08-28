@@ -41,6 +41,7 @@ import { useGuitarAudio } from '@/hooks/use-guitar-audio'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { enhancePlanHtml } from '@/lib/plan-links'
 import { Slider } from '@/components/ui/slider'
 import {
   Select,
@@ -516,15 +517,16 @@ export default function RehearsalDetailPage() {
 
     setRehearsal(data.rehearsal)
     setRehearsalId(data.rehearsal.id)
-    setPlanDraft(data.rehearsal.plan || '')
-    setSavedPlan(data.rehearsal.plan || '')
+    setAllSongs(data.all_songs || [])
+    const plan = enhancePlanHtml(data.rehearsal.plan || '', data.all_songs || [])
+    setPlanDraft(plan)
+    setSavedPlan(plan)
     setAudioFiles(data.audio_files || [])
     setComments(data.comments || [])
     setAudioComments(data.audio_comments || {})
     setAllVideos(data.all_videos || [])
     setSelectedVideoIds(data.selected_video_ids || [])
     setRehearsalVideos(data.rehearsal_videos || [])
-    setAllSongs(data.all_songs || [])
 
     try {
       const multitrackResponse = await fetch(
@@ -1264,11 +1266,14 @@ export default function RehearsalDetailPage() {
                     value={planDraft}
                     onChange={setPlanDraft}
                     placeholder="Что играем на этой репетиции..."
+                    songTitles={allSongs}
                   />
                 ) : savedPlan ? (
                   <div
-                    className="prose prose-sm dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold"
-                    dangerouslySetInnerHTML={{ __html: savedPlan }}
+                    className="prose prose-sm dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2"
+                    dangerouslySetInnerHTML={{
+                      __html: enhancePlanHtml(savedPlan, allSongs),
+                    }}
                   />
                 ) : null}
               </CardContent>
